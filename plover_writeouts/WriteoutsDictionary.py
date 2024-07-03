@@ -1,10 +1,11 @@
 from typing import Optional
 import json
-from collections import defaultdict
 
 from plover.steno import Stroke
 from plover.steno_dictionary import StenoDictionary
 import plover.log
+
+from plover_writeouts.lib.DagTrie import DagTrie
 
 def get_outline_phonemes(outline: tuple[Stroke, ...]):
     _CONSONANTS_CHORDS = {
@@ -64,44 +65,54 @@ class WriteoutsDictionary(StenoDictionary):
         """(override)"""
         self._longest_key = 8
 
-        self.__entries = {}
+        self.__dag_trie: Optional[DagTrie] = None
 
     def _load(self, filepath: str):
         with open(filepath, "r") as file:
             map: dict[str, str] = json.load(file)
 
+        self.__dag_trie = dag_trie = DagTrie()
 
         for outline_steno, translation in map.items():
-            phonemes, consonant_phonemes = get_outline_phonemes(tuple(Stroke.from_steno(stroke_steno) for stroke_steno in outline_steno.split("/")))
+            current_head = DagTrie.ROOT
 
-            if consonant_phonemes in self.__entries:
-                self.__entries[consonant_phonemes].add(translation)
-            else:
-                self.__entries[consonant_phonemes] = {translation}
+            for stroke_steno in outline_steno.split("/"):
+                stroke = Stroke.from_steno(stroke_steno)
+                for key in stroke.keys():
+                    current_head = dag_trie.get_dest_node(current_head, Stroke.from_steno(key))
 
-            plover.log.info(str(phonemes))
+            dag_trie.set_translation(current_head, translation)
 
 
-    def __getitem__(self, key: tuple[str, ...]) -> str:
-        result = self.__lookup(key)
+    def __getitem__(self, stroke_stenos: tuple[str, ...]) -> str:
+        result = self.__lookup(stroke_stenos)
         if result is None:
             raise KeyError
         
         return result
 
-    def get(self, key: tuple[str, ...], fallback=None) -> Optional[str]:
-        result = self.__lookup(key)
+    def get(self, stroke_stenos: tuple[str, ...], fallback=None) -> Optional[str]:
+        result = self.__lookup(stroke_stenos)
         if result is None:
             return fallback
         
         return result
     
-    def __lookup(self, key: tuple[str, ...]) -> Optional[str]:
-        phonemes, consonant_phonemes = get_outline_phonemes(tuple(Stroke.from_steno(stroke_steno) for stroke_steno in key))
+    def __lookup(self, stroke_stenos: tuple[str, ...]) -> Optional[str]:
+        if self.__dag_trie is None:
+            raise Exception("lookup occurred before load")
 
-        consonant_lookup_result = self.__entries.get(consonant_phonemes)
-        if consonant_lookup_result is None:
-            return None
-        
-        return tuple(consonant_lookup_result)[0]
+        current_head = DagTrie.ROOT
+
+        dag_trie = self.__dag_trie
+
+        for stroke_steno in stroke_stenos:
+            stroke = Stroke.from_steno(stroke_steno)
+            for key in stroke.keys():
+                current_head = dag_trie.find_dest_node(current_head, Stroke.from_steno(key))
+
+                if current_head is None:
+                    return None
+
+        return dag_trie.get_translation(current_head)
 
