@@ -43,14 +43,15 @@ class WriteoutsDictionary(StenoDictionary):
         self.__dag_trie = dag_trie
 
         _RTL_CONSONANTS: dict[Stroke, Stroke] = {
-            Stroke.from_steno(steno_main): Stroke.from_steno(steno_alt)
-            for steno_main, steno_alt in {
+            Stroke.from_steno(steno_right): Stroke.from_steno(steno_left)
+            for steno_right, steno_left in {
                 "-F": "TP",
                 "-FB": "SR",
                 "-FL": "TPHR",
                 "-R": "R",
                 "-P": "P",
                 "-PB": "TPH",
+                "-PBLG": "SKWR",
                 "-PL": "PH",
                 "-B": "PW",
                 "-BG": "K",
@@ -64,31 +65,17 @@ class WriteoutsDictionary(StenoDictionary):
         }
 
         _LTR_CONSONANTS: dict[Stroke, Stroke] = {
-            Stroke.from_steno(steno_main): Stroke.from_steno(steno_alt)
-            for steno_main, steno_alt in {
-                "TP": "-F",
-                "SR": "-FB",
-                "TPHR": "-FL",
-                "R": "-R",
-                "P": "-P",
-                "TPH": "-PB",
-                "PH": "-PL",
-                "PW": "-B",
-                "K": "-BG",
-                "HR": "-L",
-                "TKPW": "-G",
-                "T": "-T",
-                "S": "-S",
-                "TK": "-D",
-                "STKPW": "-Z",
-            }.items()
+            left: right
+            for right, left in _RTL_CONSONANTS.items()
         }
 
         _LTR_F_CONSONANTS: dict[Stroke, Stroke] = {
             Stroke.from_steno(steno_main): Stroke.from_steno(steno_alt)
             for steno_main, steno_alt in {
                 "S": "-F",
+                "SR": "-F",
                 "SKWR": "-F",
+                "TH": "-F",
                 "PH": "-FR",
             }.items()
         }
@@ -247,7 +234,7 @@ class WriteoutsDictionary(StenoDictionary):
 
         dag_trie = self.__dag_trie
 
-        # plover.log.info("new lookup")
+        plover.log.info("new lookup")
 
         for i, stroke_steno in enumerate(stroke_stenos):
             stroke = Stroke.from_steno(stroke_steno)
@@ -264,14 +251,14 @@ class WriteoutsDictionary(StenoDictionary):
             if len(left_bank_consonants) > 0:
                 left_bank_consonants_keys = left_bank_consonants.keys()
                 current_head = dag_trie.get_dst_node_chain(current_head, left_bank_consonants_keys)
-                # plover.log.info(left_bank_consonants_keys)
+                plover.log.info(left_bank_consonants_keys)
 
                 if current_head is None:
                     return None
 
             if len(vowels) == 0:
                 return None
-            # plover.log.info(vowels)
+            plover.log.info(vowels)
             current_head = dag_trie.get_dst_node(current_head, vowels.rtfcre)
             if current_head is None:
                 return None
@@ -279,7 +266,7 @@ class WriteoutsDictionary(StenoDictionary):
             if len(right_bank_consonants) > 0:
                 right_bank_consonants_keys = right_bank_consonants.keys()
                 current_head = dag_trie.get_dst_node_chain(current_head, right_bank_consonants_keys)
-                # plover.log.info(right_bank_consonants_keys)
+                plover.log.info(right_bank_consonants_keys)
                 if current_head is None:
                     return None
 

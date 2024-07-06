@@ -50,7 +50,7 @@ _CONSONANT_CHORDS: dict[str, Phoneme] = {
     "TKPW": Phoneme.G,
     "TP": Phoneme.F,
     "TPH": Phoneme.N,
-    "KPW": Phoneme.K,
+    "K": Phoneme.K,
     "KWR": Phoneme.Y,
     "PW": Phoneme.B,
     "PH": Phoneme.M,
