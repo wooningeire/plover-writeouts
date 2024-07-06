@@ -1,5 +1,6 @@
 from collections import defaultdict
 from enum import Enum, auto
+from typing import Optional
 
 from plover.steno import Stroke
 
@@ -102,6 +103,8 @@ def split_consonant_phonemes(consonants: Stroke):
 
         longest_chord_end_index = chord_start_index
 
+        entry: Optional[tuple[Phoneme, Stroke]] = None
+
         for seek_index in range(chord_start_index, len(keys)):
             key = keys[seek_index]
             
@@ -111,10 +114,13 @@ def split_consonant_phonemes(consonants: Stroke):
 
             new_entry = _consonants_trie.get_translation(current_node)
             if new_entry is None:
-                break
+                continue
         
+            entry = new_entry
             longest_chord_end_index = seek_index
-            entries_found.append(new_entry)
+
+        if entry is not None:
+            entries_found.append(entry)
 
         chord_start_index = longest_chord_end_index + 1
 
