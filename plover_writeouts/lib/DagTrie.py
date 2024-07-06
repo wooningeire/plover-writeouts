@@ -1,7 +1,9 @@
-from typing import Generic, TypeVar
+from typing import Generic, TypeVar, Callable
 
 from plover.steno import Stroke
 
+S = TypeVar("S")
+T = TypeVar("T")
 K = TypeVar("K")
 V = TypeVar("V")
 

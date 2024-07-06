@@ -34,13 +34,15 @@ class WriteoutsDictionary(StenoDictionary):
         self.__dag_trie: Optional[DagTrie[str, str]] = None
 
     def _load(self, filepath: str):
+        from plover_writeouts.lib.Phoneme import Phoneme, split_consonant_phonemes
+
         with open(filepath, "r") as file:
             map: dict[str, str] = json.load(file)
 
         dag_trie: DagTrie[str, str] = DagTrie()
         self.__dag_trie = dag_trie
 
-        _CHORD_ALTERNATIVES: dict[Stroke, Stroke] = {
+        _RTL_CONSONANTS: dict[Stroke, Stroke] = {
             Stroke.from_steno(steno_main): Stroke.from_steno(steno_alt)
             for steno_main, steno_alt in {
                 "-F": "TP",
@@ -58,22 +60,6 @@ class WriteoutsDictionary(StenoDictionary):
                 "-S": "S",
                 "-D": "TK",
                 "-Z": "STKPW",
-                
-                "TP": "-F",
-                "SR": "-FB",
-                "TPHR": "-FL",
-                "R": "-R",
-                "P": "-P",
-                "TPH": "-PB",
-                "PH": "-PL",
-                "PW": "-B",
-                "K": "-BG",
-                "HR": "-L",
-                "TKPW": "-G",
-                "T": "-T",
-                "S": "-S",
-                "TK": "-D",
-                "STKPW": "-Z",
             }.items()
         }
 
@@ -102,9 +88,25 @@ class WriteoutsDictionary(StenoDictionary):
             Stroke.from_steno(steno_main): Stroke.from_steno(steno_alt)
             for steno_main, steno_alt in {
                 "S": "-F",
+                "SKWR": "-F",
                 "PH": "-FR",
             }.items()
         }
+
+        _CLUSTERS: dict[tuple[Phoneme, ...], Stroke] = {
+            phonemes: Stroke.from_steno(steno)
+            for phonemes, steno in {
+                (Phoneme.D, Phoneme.S): "STK",
+                (Phoneme.G, Phoneme.L): "-LG",
+            }.items()
+        }
+        clusters_trie: DagTrie[Phoneme, Stroke] = DagTrie()
+        for phonemes, stroke in _CLUSTERS.items():
+            current_head = clusters_trie.ROOT
+            for key in phonemes:
+                current_head = clusters_trie.get_dst_node_else_create(current_head, key)
+            
+            clusters_trie.set_translation(current_head, stroke)
 
         for outline_steno, translation in map.items():
             current_head = DagTrie.ROOT
@@ -113,7 +115,10 @@ class WriteoutsDictionary(StenoDictionary):
             last_preboundary_node = None
             last_alternate_right_base_nodes: list[int] = []
             last_alternate_stroke_start_node = None
-            consonants_since_last_vowel = []
+
+            # Identifying clusters
+            consonant_phonemes: list[tuple[Phoneme, int]] = []
+            current_consonant_cluster_nodes: list[int] = []
 
             for i, stroke_steno in enumerate(outline_steno.split("/")):
                 if i > 0:
@@ -124,7 +129,32 @@ class WriteoutsDictionary(StenoDictionary):
                 left_bank_consonants, vowels, right_bank_consonants = split_stroke_parts(stroke)
 
                 if len(left_bank_consonants) > 0:
+                    prephoneme_node = current_head
+
                     current_head = dag_trie.get_dst_node_else_create_chain(current_head, left_bank_consonants.keys())
+                    
+                    for phoneme, stroke in split_consonant_phonemes(left_bank_consonants):
+                        # update cluster nodes
+                        consonant_phonemes.append((phoneme, prephoneme_node))
+                        current_consonant_cluster_nodes.append(clusters_trie.ROOT)
+
+
+                        new_consonants_list: list[tuple[Phoneme, int]] = []
+                        new_cluster_nodes: list[int] = []
+                        for consonant, cluster_node in zip(consonant_phonemes, current_consonant_cluster_nodes):
+                            new_cluster_node = clusters_trie.get_dst_node(cluster_node, phoneme)
+                            if new_cluster_node is None: continue
+
+                            new_consonants_list.append(consonant)
+                            new_cluster_nodes.append(new_cluster_node)
+
+                            found_cluster = clusters_trie.get_translation(new_cluster_node)
+                            if found_cluster is None: continue
+
+                            dag_trie.link_chain(consonant[1], current_head, found_cluster.keys())
+                        consonant_phonemes = new_consonants_list
+                        current_consonant_cluster_nodes = new_cluster_nodes
+
 
                     # after first consonant phoneme: elision of previous stroke's vowels
                     if last_prevowels_node is not None:
