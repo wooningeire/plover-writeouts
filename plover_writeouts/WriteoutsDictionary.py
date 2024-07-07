@@ -5,7 +5,7 @@ from plover.steno import Stroke
 from plover.steno_dictionary import StenoDictionary
 import plover.log
 
-from plover_writeouts.lib.DagTrie import DagTrie
+from .lib.DagTrie import DagTrie
 
 def split_stroke_parts(stroke: Stroke):
     _LEFT_BANK_CONSONANTS_SUBSTROKE = Stroke.from_steno("STKPWHR")
@@ -34,7 +34,13 @@ class WriteoutsDictionary(StenoDictionary):
         self.__dag_trie: Optional[DagTrie[str, str]] = None
 
     def _load(self, filepath: str):
-        from plover_writeouts.lib.Phoneme import Phoneme, split_consonant_phonemes
+        from .lib.Phoneme import Phoneme, split_consonant_phonemes
+        from .lib.DictionaryTrieBuilder import (
+            allow_elide_previous_vowel_using_first_starting_consonant,
+            start_ltr_consonant_reattachment_no_previous_right_bank,
+            continue_ltr_consonant_reattachment,
+            finish_ltr_consonant_reattachment,
+        )
 
         with open(filepath, "r") as file:
             map: dict[str, str] = json.load(file)
@@ -100,7 +106,7 @@ class WriteoutsDictionary(StenoDictionary):
 
             last_prevowels_node = None
             last_preboundary_node = None
-            last_alternate_right_base_nodes: list[int] = []
+            last_post_right_consonant_nodes: list[int] = []
             last_alternate_stroke_start_node = None
 
             # Identifying clusters
@@ -118,14 +124,17 @@ class WriteoutsDictionary(StenoDictionary):
                 if len(left_bank_consonants) > 0:
                     prephoneme_node = last_preboundary_node or current_head
 
-                    current_head = dag_trie.get_dst_node_else_create_chain(current_head, left_bank_consonants.keys())
-
                     delayed_cluster: Optional[tuple[int, Stroke]] = None
+
+                    main_right_consonant_node = None
+                    f_right_consonant_node = None
                     
-                    for phoneme, substroke in split_consonant_phonemes(left_bank_consonants):
+                    for j, (phoneme, phoneme_substroke) in enumerate(split_consonant_phonemes(left_bank_consonants)):
                         # update cluster nodes
                         consonant_phonemes.append((phoneme, prephoneme_node))
                         current_consonant_cluster_nodes.append(clusters_trie.ROOT)
+
+                        current_head = dag_trie.get_dst_node_else_create_chain(current_head, phoneme_substroke.keys())
 
 
                         new_consonants_list: list[tuple[Phoneme, int]] = []
@@ -149,43 +158,21 @@ class WriteoutsDictionary(StenoDictionary):
                         consonant_phonemes = new_consonants_list
                         current_consonant_cluster_nodes = new_cluster_nodes
 
-
-                    # after first consonant phoneme: elision of previous stroke's vowels
-                    if last_prevowels_node is not None:
-                        dag_trie.link_chain(last_prevowels_node, current_head, left_bank_consonants.keys())
+                        if j == 0:
+                            allow_elide_previous_vowel_using_first_starting_consonant(dag_trie, current_head, phoneme_substroke, last_prevowels_node, last_alternate_stroke_start_node)
+                            main_right_consonant_node, f_right_consonant_node, alternate_stroke_start_node = start_ltr_consonant_reattachment_no_previous_right_bank(
+                                dag_trie, phoneme_substroke, last_preboundary_node, last_post_right_consonant_nodes,
+                            )
+                        elif main_right_consonant_node is not None and alternate_stroke_start_node is not None:
+                            main_right_consonant_node, f_right_consonant_node, alternate_stroke_start_node = continue_ltr_consonant_reattachment(
+                                dag_trie, current_head, phoneme_substroke, main_right_consonant_node, f_right_consonant_node, alternate_stroke_start_node,
+                            )
+                        
+                        last_post_right_consonant_nodes = [node for node in [main_right_consonant_node, f_right_consonant_node] if node is not None]
+                        last_alternate_stroke_start_node = alternate_stroke_start_node
 
                     if last_alternate_stroke_start_node is not None:
-                        dag_trie.link_chain(last_alternate_stroke_start_node, current_head, left_bank_consonants.keys())
-
-
-                    # after all consonant phonemes: reattachment of consonant to previous stroke
-                    new_alternate_right_base_nodes: list[int] = []
-                    new_alternate_stroke_start_node = None
-                    if left_bank_consonants in _LTR_CONSONANTS and last_preboundary_node is not None:
-                        alternate_head = dag_trie.get_dst_node_else_create_chain(last_preboundary_node, _LTR_CONSONANTS[left_bank_consonants].keys())
-                        new_alternate_right_base_nodes.append(alternate_head)
-
-                        # chain together ending chords
-                        for node in last_alternate_right_base_nodes:
-                            dag_trie.link_chain(node, alternate_head, _LTR_CONSONANTS[left_bank_consonants].keys())
-
-
-                        alternate_head = dag_trie.get_dst_node_else_create(alternate_head, _STROKE_BOUNDARY)
-                        new_alternate_stroke_start_node = alternate_head
-
-                        dag_trie.link_chain(alternate_head, current_head, Stroke.from_steno("KWR").keys())
-
-                    if left_bank_consonants in _LTR_F_CONSONANTS and last_preboundary_node is not None:
-                        alternate_head = dag_trie.get_dst_node_else_create_chain(last_preboundary_node, _LTR_F_CONSONANTS[left_bank_consonants].keys())
-
-                        # chain together ending chords
-                        for node in last_alternate_right_base_nodes:
-                            dag_trie.link_chain(node, alternate_head, _LTR_F_CONSONANTS[left_bank_consonants].keys())
-
-                        new_alternate_right_base_nodes.append(alternate_head)
-                    
-                    last_alternate_right_base_nodes = new_alternate_right_base_nodes
-                    last_alternate_stroke_start_node = new_alternate_stroke_start_node
+                        finish_ltr_consonant_reattachment(dag_trie, current_head, last_alternate_stroke_start_node)
 
                 last_prevowels_node = current_head
 
@@ -201,7 +188,7 @@ class WriteoutsDictionary(StenoDictionary):
                     current_head = dag_trie.get_dst_node_else_create_chain(current_head, right_bank_consonants.keys())
 
                     # after first consonant phoneme: elision of this stroke's vowels
-                    for node in last_alternate_right_base_nodes:
+                    for node in last_post_right_consonant_nodes:
                         dag_trie.link_chain(node, current_head, right_bank_consonants.keys())
 
                 last_preboundary_node = current_head
@@ -234,7 +221,7 @@ class WriteoutsDictionary(StenoDictionary):
 
         dag_trie = self.__dag_trie
 
-        plover.log.info("new lookup")
+        # plover.log.info("new lookup")
 
         for i, stroke_steno in enumerate(stroke_stenos):
             stroke = Stroke.from_steno(stroke_steno)
@@ -251,14 +238,14 @@ class WriteoutsDictionary(StenoDictionary):
             if len(left_bank_consonants) > 0:
                 left_bank_consonants_keys = left_bank_consonants.keys()
                 current_head = dag_trie.get_dst_node_chain(current_head, left_bank_consonants_keys)
-                plover.log.info(left_bank_consonants_keys)
+                # plover.log.info(left_bank_consonants_keys)
 
                 if current_head is None:
                     return None
 
             if len(vowels) == 0:
                 return None
-            plover.log.info(vowels)
+            # plover.log.info(vowels)
             current_head = dag_trie.get_dst_node(current_head, vowels.rtfcre)
             if current_head is None:
                 return None
@@ -266,7 +253,7 @@ class WriteoutsDictionary(StenoDictionary):
             if len(right_bank_consonants) > 0:
                 right_bank_consonants_keys = right_bank_consonants.keys()
                 current_head = dag_trie.get_dst_node_chain(current_head, right_bank_consonants_keys)
-                plover.log.info(right_bank_consonants_keys)
+                # plover.log.info(right_bank_consonants_keys)
                 if current_head is None:
                     return None
 
