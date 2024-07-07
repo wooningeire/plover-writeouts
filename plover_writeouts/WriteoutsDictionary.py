@@ -48,44 +48,6 @@ class WriteoutsDictionary(StenoDictionary):
         dag_trie: DagTrie[str, str] = DagTrie()
         self.__dag_trie = dag_trie
 
-        _RTL_CONSONANTS: dict[Stroke, Stroke] = {
-            Stroke.from_steno(steno_right): Stroke.from_steno(steno_left)
-            for steno_right, steno_left in {
-                "-F": "TP",
-                "-FB": "SR",
-                "-FL": "TPHR",
-                "-R": "R",
-                "-P": "P",
-                "-PB": "TPH",
-                "-PBLG": "SKWR",
-                "-PL": "PH",
-                "-B": "PW",
-                "-BG": "K",
-                "-L": "HR",
-                "-G": "TKPW",
-                "-T": "T",
-                "-S": "S",
-                "-D": "TK",
-                "-Z": "STKPW",
-            }.items()
-        }
-
-        _LTR_CONSONANTS: dict[Stroke, Stroke] = {
-            left: right
-            for right, left in _RTL_CONSONANTS.items()
-        }
-
-        _LTR_F_CONSONANTS: dict[Stroke, Stroke] = {
-            Stroke.from_steno(steno_main): Stroke.from_steno(steno_alt)
-            for steno_main, steno_alt in {
-                "S": "-F",
-                "SR": "-F",
-                "SKWR": "-F",
-                "TH": "-F",
-                "PH": "-FR",
-            }.items()
-        }
-
         _CLUSTERS: dict[tuple[Phoneme, ...], Stroke] = {
             phonemes: Stroke.from_steno(steno)
             for phonemes, steno in {
@@ -124,7 +86,7 @@ class WriteoutsDictionary(StenoDictionary):
                 if len(left_bank_consonants) > 0:
                     prephoneme_node = last_preboundary_node or current_head
 
-                    delayed_cluster: Optional[tuple[int, Stroke]] = None
+                    delayed_clusters: list[tuple[int, Stroke]] = []
 
                     main_right_consonant_node = None
                     f_right_consonant_node = None
@@ -151,7 +113,7 @@ class WriteoutsDictionary(StenoDictionary):
 
                             # Delay assigning right-bank clusters until after the vowels transition is added in order to elide the vowel
                             if len(found_cluster & Stroke.from_steno("-FRPBLGTSDZ")) > 0:
-                                delayed_cluster = (consonant[1], found_cluster)
+                                delayed_clusters.append((consonant[1], found_cluster))
                                 continue
 
                             dag_trie.link_chain(consonant[1], current_head, found_cluster.keys())
@@ -163,9 +125,9 @@ class WriteoutsDictionary(StenoDictionary):
                             main_right_consonant_node, f_right_consonant_node, alternate_stroke_start_node = start_ltr_consonant_reattachment_no_previous_right_bank(
                                 dag_trie, phoneme_substroke, last_preboundary_node, last_post_right_consonant_nodes,
                             )
-                        elif main_right_consonant_node is not None and alternate_stroke_start_node is not None:
+                        elif main_right_consonant_node is not None and last_alternate_stroke_start_node is not None:
                             main_right_consonant_node, f_right_consonant_node, alternate_stroke_start_node = continue_ltr_consonant_reattachment(
-                                dag_trie, current_head, phoneme_substroke, main_right_consonant_node, f_right_consonant_node, alternate_stroke_start_node,
+                                dag_trie, current_head, phoneme_substroke, main_right_consonant_node, f_right_consonant_node, last_alternate_stroke_start_node,
                             )
                         
                         last_post_right_consonant_nodes = [node for node in [main_right_consonant_node, f_right_consonant_node] if node is not None]
@@ -181,8 +143,8 @@ class WriteoutsDictionary(StenoDictionary):
                 if len(vowels) > 0:
                     current_head = dag_trie.get_dst_node_else_create(current_head, vowels.rtfcre)
 
-                if delayed_cluster is not None:
-                    dag_trie.link_chain(delayed_cluster[0], current_head, delayed_cluster[1].keys())
+                for cluster in delayed_clusters:
+                    dag_trie.link_chain(cluster[0], current_head, cluster[1].keys())
 
                 if len(right_bank_consonants) > 0:
                     current_head = dag_trie.get_dst_node_else_create_chain(current_head, right_bank_consonants.keys())
@@ -193,10 +155,10 @@ class WriteoutsDictionary(StenoDictionary):
 
                 last_preboundary_node = current_head
 
-
-
-
             dag_trie.set_translation(current_head, translation)
+
+        # with open(f"{filepath}.trie.js", "w") as file:
+        #     file.write(dag_trie.to_xstate())
 
 
     def __getitem__(self, stroke_stenos: tuple[str, ...]) -> str:

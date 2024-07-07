@@ -59,3 +59,25 @@ class DagTrie(Generic[K, V]):
     
     def get_translation(self, node: int):
         return self.__translations.get(node, None)
+
+#     def to_xstate(self):
+#         return (
+#             """
+# import { createMachine } from "xstate";
+
+# export const machine = createMachine({
+#   context: {},
+#   id: "dag_trie",
+#   initial: "0",
+#   states: {
+# """ +
+#             "".join(f"""    "{i}": {{
+#       on: {{
+#         {" ".join(f'"{trigger}": {{ target: "{dst_node}" }},' for trigger, dst_node in transitions.items())}
+#       }},
+#     }},
+# """ for i, transitions in enumerate(self.__nodes)) +
+# """
+#   },
+# }).withConfig({});
+# """)
