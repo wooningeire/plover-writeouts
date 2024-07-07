@@ -1,6 +1,6 @@
-from typing import Generic, TypeVar, Callable
+from typing import Generic, TypeVar
+import traceback
 
-from plover.steno import Stroke
 import plover.log
 
 S = TypeVar("S")
@@ -52,6 +52,12 @@ class DagTrie(Generic[K, V]):
         current_node = src_node
         for key in keys[:-1]:
             current_node = self.get_dst_node_else_create(current_node, key)
+
+        if keys[-1] in self.__nodes[current_node] and self.__nodes[current_node][keys[-1]] != dst_node:
+            for line in traceback.format_stack():
+                plover.log.info(line.strip())
+            raise Exception(f"error linking: tried to link from {src_node} to {dst_node} with {keys[-1]} but already linked to {self.__nodes[current_node][keys[-1]]}")
+
         self.__nodes[current_node][keys[-1]] = dst_node
     
     def set_translation(self, node: int, translation: V):

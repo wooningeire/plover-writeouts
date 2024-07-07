@@ -72,6 +72,7 @@ for phonemes, stroke in _CLUSTERS.items():
 
 
 STROKE_BOUNDARY = "/"
+LINKER_CHORD = Stroke.from_steno("KWR")
 
 def allow_elide_previous_vowel_using_first_starting_consonant(dag_trie: DagTrie[str, str], current_head: int, first_phoneme_substroke: Stroke, last_prevowels_node: Optional[int], last_alternate_stroke_start_node: Optional[int]):
     if last_prevowels_node is not None:
@@ -133,4 +134,5 @@ def continue_ltr_consonant_reattachment(dag_trie: DagTrie[str, str], current_hea
     return main_right_consonant_node, f_right_consonant_node, alternate_stroke_start_node
 
 def finish_ltr_consonant_reattachment(dag_trie: DagTrie[str, str], current_head: int, last_alternate_stroke_start_node: int):
-    dag_trie.link_chain(last_alternate_stroke_start_node, current_head, Stroke.from_steno("KWR").keys())
+    """Note: may cause some graphs to be nondeterministic"""
+    dag_trie.link_chain(last_alternate_stroke_start_node, current_head, LINKER_CHORD.keys())

@@ -75,6 +75,8 @@ class WriteoutsDictionary(StenoDictionary):
             consonant_phonemes: list[tuple[Phoneme, int]] = []
             current_consonant_cluster_nodes: list[int] = []
 
+            delayed_clusters: list[tuple[int, Stroke]] = []
+
             for i, stroke_steno in enumerate(outline_steno.split("/")):
                 if i > 0:
                     current_head = dag_trie.get_dst_node_else_create(current_head, _STROKE_BOUNDARY)
@@ -86,7 +88,7 @@ class WriteoutsDictionary(StenoDictionary):
                 if len(left_bank_consonants) > 0:
                     prephoneme_node = last_preboundary_node or current_head
 
-                    delayed_clusters: list[tuple[int, Stroke]] = []
+                    delayed_clusters = []
 
                     main_right_consonant_node = None
                     f_right_consonant_node = None
@@ -133,8 +135,8 @@ class WriteoutsDictionary(StenoDictionary):
                         last_post_right_consonant_nodes = [node for node in [main_right_consonant_node, f_right_consonant_node] if node is not None]
                         last_alternate_stroke_start_node = alternate_stroke_start_node
 
-                    if last_alternate_stroke_start_node is not None:
-                        finish_ltr_consonant_reattachment(dag_trie, current_head, last_alternate_stroke_start_node)
+                    # if last_alternate_stroke_start_node is not None:
+                    #     finish_ltr_consonant_reattachment(dag_trie, current_head, last_alternate_stroke_start_node)
 
                 last_prevowels_node = current_head
 
