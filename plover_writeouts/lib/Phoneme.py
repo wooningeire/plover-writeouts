@@ -32,49 +32,53 @@ class Phoneme(Enum):
     TH = auto()
 
 
-_CONSONANT_CHORDS: dict[str, Phoneme] = {
-    # LEFT BANK
+PHONEMES_TO_CHORDS_LEFT: dict[Phoneme, Stroke] = {
+    phoneme: Stroke.from_steno(steno)
+    for phoneme, steno in {
+        Phoneme.S: "S",
+        Phoneme.T: "T",
+        Phoneme.K: "K",
+        Phoneme.P: "P",
+        Phoneme.W: "W",
+        Phoneme.H: "H",
+        Phoneme.R: "R",
 
-    "S": Phoneme.S,
-    "T": Phoneme.T,
-    "K": Phoneme.K,
-    "P": Phoneme.P,
-    "W": Phoneme.W,
-    "H": Phoneme.H,
-    "R": Phoneme.R,
+        Phoneme.Z: "STKPW",
+        Phoneme.J: "SKWR",
+        Phoneme.V: "SR",
+        Phoneme.D: "TK",
+        Phoneme.G: "TKPW",
+        Phoneme.F: "TP",
+        Phoneme.N: "TPH",
+        Phoneme.Y: "KWR",
+        Phoneme.B: "PW",
+        Phoneme.M: "PH",
+        Phoneme.L: "HR",
+    }.items()
+}
 
-    "STKPW": Phoneme.Z,
-    "SKWR": Phoneme.J,
-    "SR": Phoneme.V,
-    "TK": Phoneme.D,
-    "TKPW": Phoneme.G,
-    "TP": Phoneme.F,
-    "TPH": Phoneme.N,
-    "K": Phoneme.K,
-    "KWR": Phoneme.Y,
-    "PW": Phoneme.B,
-    "PH": Phoneme.M,
-    "HR": Phoneme.L,
+PHONEMES_TO_CHORDS_RIGHT: dict[Phoneme, Stroke] = {
+    phoneme: Stroke.from_steno(steno)
+    for phoneme, steno in {
+        Phoneme.F: "-F",
+        Phoneme.R: "-R",
+        Phoneme.P: "-P",
+        Phoneme.B: "-B",
+        Phoneme.L: "-L",
+        Phoneme.G: "-G",
+        Phoneme.T: "-T",
+        Phoneme.S: "-S",
+        Phoneme.D: "-D",
+        Phoneme.Z: "-Z",
 
-    # RIGHT BANK
-
-    "-F": Phoneme.F,
-    "-R": Phoneme.R,
-    "-P": Phoneme.P,
-    "-B": Phoneme.B,
-    "-L": Phoneme.L,
-    "-G": Phoneme.G,
-    "-T": Phoneme.T,
-    "-S": Phoneme.S,
-    "-D": Phoneme.D,
-    "-Z": Phoneme.Z,
-
-    "-FB": Phoneme.V,
-    "-PB": Phoneme.N,
-    "-PL": Phoneme.M,
-    "-BG": Phoneme.K,
-    "-FP": Phoneme.CH,
-    "-PBLG": Phoneme.J,
+        Phoneme.V: "-FB",
+        Phoneme.N: "-PB",
+        Phoneme.M: "-PL",
+        Phoneme.K: "-BG",
+        Phoneme.CH: "-FP",
+        Phoneme.SH: "-RB",
+        Phoneme.J: "-PBLG",
+    }.items()
 
     # "SHR": "shr",
     # "THR": "thr",
@@ -83,19 +87,38 @@ _CONSONANT_CHORDS: dict[str, Phoneme] = {
     # "-FRB": (Phoneme.R, Phoneme.V),
 }
 
-_consonants_trie: DagTrie[str, tuple[Phoneme, Stroke]] = DagTrie()
-for chord, entry in _CONSONANT_CHORDS.items():
-    stroke = Stroke.from_steno(chord)
-    current_head = _consonants_trie.ROOT
-    for key in stroke.keys():
-        current_head = _consonants_trie.get_dst_node_else_create(current_head, key)
-    
-    _consonants_trie.set_translation(current_head, (entry, stroke))
+PHONEMES_TO_CHORDS_RIGHT_F: dict[Phoneme, Stroke] = {
+    phoneme: Stroke.from_steno(steno)
+    for phoneme, steno in {
+        Phoneme.S: "-F",
+        Phoneme.Z: "-F",
+        Phoneme.V: "-F",
+        Phoneme.TH: "-F",
+        Phoneme.J: "-F",
+        Phoneme.M: "-FR",
+    }.items()
+}
 
-def split_consonant_phonemes(consonants: Stroke):
-    entries_found: list[tuple[Phoneme, Stroke]] = []
+_CONSONANT_CHORDS: dict[Stroke, Phoneme] = {
+    **{
+        stroke: phoneme
+        for phoneme, stroke in PHONEMES_TO_CHORDS_LEFT.items()
+    },
+    **{
+        stroke: phoneme
+        for phoneme, stroke in PHONEMES_TO_CHORDS_RIGHT.items()
+    },
+}
 
-    keys = consonants.keys()
+_consonants_trie: DagTrie[str, Phoneme] = DagTrie()
+for _stroke, _phoneme in _CONSONANT_CHORDS.items():
+    _current_head = _consonants_trie.get_dst_node_else_create_chain(_consonants_trie.ROOT, _stroke.keys())
+    _consonants_trie.set_translation(_current_head, _phoneme)
+
+def split_consonant_phonemes(consonants_stroke: Stroke):
+    entries_found: list[Phoneme] = []
+
+    keys = consonants_stroke.keys()
     
     chord_start_index = 0
     while chord_start_index < len(keys):
@@ -103,7 +126,7 @@ def split_consonant_phonemes(consonants: Stroke):
 
         longest_chord_end_index = chord_start_index
 
-        entry: Optional[tuple[Phoneme, Stroke]] = None
+        entry: Optional[Phoneme] = None
 
         for seek_index in range(chord_start_index, len(keys)):
             key = keys[seek_index]
