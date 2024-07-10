@@ -54,6 +54,10 @@ PHONEMES_TO_CHORDS_LEFT: dict[Phoneme, Stroke] = {
         Phoneme.B: "PW",
         Phoneme.M: "PH",
         Phoneme.L: "HR",
+
+        Phoneme.SH: "SH",
+        Phoneme.TH: "TH",
+        Phoneme.CH: "KH",
     }.items()
 }
 
