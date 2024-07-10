@@ -4,7 +4,7 @@ from typing import Optional
 
 from plover.steno import Stroke
 
-from .DagTrie import Trie, NondeterministicTrie
+from .Trie import Trie, NondeterministicTrie
 
 class Phoneme(Enum):
     S = auto()

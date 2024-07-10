@@ -3,7 +3,7 @@ from typing import Callable, Optional
 from plover.steno import Stroke
 import plover.log
 
-from .DagTrie import Trie, NondeterministicTrie
+from .Trie import Trie, NondeterministicTrie
 from .Phoneme import Phoneme, split_consonant_phonemes, PHONEMES_TO_CHORDS_LEFT, PHONEMES_TO_CHORDS_RIGHT, PHONEMES_TO_CHORDS_RIGHT_F
 
 _LEFT_BANK_CONSONANTS_SUBSTROKE = Stroke.from_steno("STKPWHR")
@@ -39,19 +39,19 @@ _LINKER_CHORD = Stroke.from_steno("SWH")
 
 
 def build_lookup(mappings: dict[str, str]):
-    dag_trie: NondeterministicTrie[str, str] = NondeterministicTrie()
+    trie: NondeterministicTrie[str, str] = NondeterministicTrie()
 
     for outline_steno, translation in mappings.items():
-        _add_entry(dag_trie, outline_steno, translation)
+        _add_entry(trie, outline_steno, translation)
 
-    # plover.log.info(dag_trie.__str__())
+    # plover.log.info(trie.__str__())
 
-    return _create_lookup_for(dag_trie)
+    return _create_lookup_for(trie)
 
-def _add_entry(dag_trie: NondeterministicTrie[str, str], outline_steno: str, translation: str):
+def _add_entry(trie: NondeterministicTrie[str, str], outline_steno: str, translation: str):
     current_syllable_consonants: list[Phoneme] = []
 
-    last_left_consonant_node: Optional[int] = dag_trie.ROOT
+    last_left_consonant_node: Optional[int] = trie.ROOT
     last_right_consonant_node: Optional[int] = None
     last_right_consonant_f_node: Optional[int] = None
 
@@ -81,24 +81,24 @@ def _add_entry(dag_trie: NondeterministicTrie[str, str], outline_steno: str, tra
                 )
 
 
-                left_consonant_node = dag_trie.get_first_dst_node_else_create_chain(last_left_consonant_node, PHONEMES_TO_CHORDS_LEFT[consonant].keys())
+                left_consonant_node = trie.get_first_dst_node_else_create_chain(last_left_consonant_node, PHONEMES_TO_CHORDS_LEFT[consonant].keys())
 
 
                 @_if_cluster_found(cluster_consonants, cluster_consonant_nodes)
                 def add_cluster(consonant_and_positions: tuple[Phoneme, Optional[int], Optional[int], Optional[int]], found_cluster: Stroke):
                     cluster_left, cluster_vowels, cluster_right = _split_stroke_parts(found_cluster)
                     if len(cluster_left) > 0 and consonant_and_positions[1] is not None:
-                        dag_trie.link_chain(consonant_and_positions[1], left_consonant_node, found_cluster.keys())
+                        trie.link_chain(consonant_and_positions[1], left_consonant_node, found_cluster.keys())
 
 
                 if not is_starting_consonants:
                     if i == 0:
                         _allow_elide_previous_vowel_using_first_left_consonant(
-                            dag_trie, PHONEMES_TO_CHORDS_LEFT[consonant], left_consonant_node, last_prevowel_node, last_rtl_stroke_boundary_node,
+                            trie, PHONEMES_TO_CHORDS_LEFT[consonant], left_consonant_node, last_prevowel_node, last_rtl_stroke_boundary_node,
                         )
 
                     last_right_consonant_node, last_right_consonant_f_node, rtl_stroke_boundary_adjacent_nodes = _add_right_consonant(
-                        dag_trie, consonant, last_right_consonant_node, last_right_consonant_f_node, left_consonant_node, last_pre_rtl_stroke_boundary_node,
+                        trie, consonant, last_right_consonant_node, last_right_consonant_f_node, left_consonant_node, last_pre_rtl_stroke_boundary_node,
                         i == 0, i == len(current_syllable_consonants) - 1, cluster_consonants, cluster_consonant_nodes,
                     )
                     if rtl_stroke_boundary_adjacent_nodes is not None:
@@ -111,9 +111,9 @@ def _add_entry(dag_trie: NondeterministicTrie[str, str], outline_steno: str, tra
             last_prevowel_node = last_left_consonant_node
             # can't really do anything all that special with vowels, so only proceed through a vowel transition
             # if it matches verbatim
-            postvowel_node = dag_trie.get_first_dst_node_else_create(last_left_consonant_node, vowels.rtfcre)
+            postvowel_node = trie.get_first_dst_node_else_create(last_left_consonant_node, vowels.rtfcre)
 
-            last_left_consonant_node = dag_trie.get_first_dst_node_else_create(postvowel_node, _STROKE_BOUNDARY)
+            last_left_consonant_node = trie.get_first_dst_node_else_create(postvowel_node, _STROKE_BOUNDARY)
             last_right_consonant_node = postvowel_node
 
             is_starting_consonants = False
@@ -125,13 +125,13 @@ def _add_entry(dag_trie: NondeterministicTrie[str, str], outline_steno: str, tra
     last_left_consonant_node = None
     for i, consonant in enumerate(current_syllable_consonants):
         last_right_consonant_node, last_right_consonant_f_node, _ = _add_right_consonant(
-            dag_trie, consonant, last_right_consonant_node, last_right_consonant_f_node, None, last_pre_rtl_stroke_boundary_node,
+            trie, consonant, last_right_consonant_node, last_right_consonant_f_node, None, last_pre_rtl_stroke_boundary_node,
             i == 0, i == len(current_syllable_consonants) - 1, cluster_consonants, cluster_consonant_nodes,
         )
 
     assert last_right_consonant_node is not None
 
-    dag_trie.set_translation(last_right_consonant_node, translation)
+    trie.set_translation(last_right_consonant_node, translation)
 
 
 def _update_cluster_tracking(
@@ -171,7 +171,7 @@ def _if_cluster_found(
     return handler
 
 def _add_right_consonant(
-    dag_trie: NondeterministicTrie[str, str],
+    trie: NondeterministicTrie[str, str],
     consonant: Phoneme,
     last_right_consonant_node: Optional[int],
     last_right_consonant_f_node: Optional[int],
@@ -185,9 +185,9 @@ def _add_right_consonant(
     if last_right_consonant_node is None or consonant not in PHONEMES_TO_CHORDS_RIGHT:
         return None, None, None
     
-    right_consonant_node = dag_trie.get_first_dst_node_else_create_chain(last_right_consonant_node, PHONEMES_TO_CHORDS_RIGHT[consonant].keys())
+    right_consonant_node = trie.get_first_dst_node_else_create_chain(last_right_consonant_node, PHONEMES_TO_CHORDS_RIGHT[consonant].keys())
     if last_right_consonant_f_node is not None:
-        dag_trie.link_chain(last_right_consonant_f_node, right_consonant_node, PHONEMES_TO_CHORDS_RIGHT[consonant].keys())
+        trie.link_chain(last_right_consonant_f_node, right_consonant_node, PHONEMES_TO_CHORDS_RIGHT[consonant].keys())
 
 
     last_rtl_stroke_boundary_node = None
@@ -195,58 +195,58 @@ def _add_right_consonant(
     if left_consonant_node is not None:
         if is_last_consonant:
             last_pre_rtl_stroke_boundary_node = right_consonant_node
-            last_rtl_stroke_boundary_node = dag_trie.get_first_dst_node_else_create(right_consonant_node, _STROKE_BOUNDARY)
-            dag_trie.link_chain(last_rtl_stroke_boundary_node, left_consonant_node, _LINKER_CHORD.keys())
+            last_rtl_stroke_boundary_node = trie.get_first_dst_node_else_create(right_consonant_node, _STROKE_BOUNDARY)
+            trie.link_chain(last_rtl_stroke_boundary_node, left_consonant_node, _LINKER_CHORD.keys())
         else:
-            dag_trie.link(right_consonant_node, left_consonant_node, _STROKE_BOUNDARY)
+            trie.link(right_consonant_node, left_consonant_node, _STROKE_BOUNDARY)
         
 
     if is_first_consonant:
-        _allow_elide_previous_vowel_using_first_right_consonant(dag_trie, PHONEMES_TO_CHORDS_RIGHT[consonant], right_consonant_node, last_pre_rtl_stroke_boundary_node)
+        _allow_elide_previous_vowel_using_first_right_consonant(trie, PHONEMES_TO_CHORDS_RIGHT[consonant], right_consonant_node, last_pre_rtl_stroke_boundary_node)
 
 
     if consonant not in PHONEMES_TO_CHORDS_RIGHT_F:
         right_consonant_f_node = None
     else:
-        right_consonant_f_node = dag_trie.get_first_dst_node_else_create_chain(last_right_consonant_node, PHONEMES_TO_CHORDS_RIGHT_F[consonant].keys())
+        right_consonant_f_node = trie.get_first_dst_node_else_create_chain(last_right_consonant_node, PHONEMES_TO_CHORDS_RIGHT_F[consonant].keys())
         if last_right_consonant_f_node is not None:
-            dag_trie.link_chain(last_right_consonant_f_node, right_consonant_f_node, PHONEMES_TO_CHORDS_RIGHT_F[consonant].keys())
+            trie.link_chain(last_right_consonant_f_node, right_consonant_f_node, PHONEMES_TO_CHORDS_RIGHT_F[consonant].keys())
             
         if is_first_consonant:
-            _allow_elide_previous_vowel_using_first_right_consonant(dag_trie, PHONEMES_TO_CHORDS_RIGHT_F[consonant], right_consonant_f_node, last_pre_rtl_stroke_boundary_node)
+            _allow_elide_previous_vowel_using_first_right_consonant(trie, PHONEMES_TO_CHORDS_RIGHT_F[consonant], right_consonant_f_node, last_pre_rtl_stroke_boundary_node)
 
 
     @_if_cluster_found(cluster_consonants, cluster_consonant_nodes)
     def add_cluster(consonant_and_positions: tuple[Phoneme, Optional[int], Optional[int], Optional[int]], found_cluster: Stroke):
         cluster_left, cluster_vowels, cluster_right = _split_stroke_parts(found_cluster)
         if len(cluster_right) > 0 and consonant_and_positions[2] is not None:
-            dag_trie.link_chain(consonant_and_positions[2], right_consonant_node, found_cluster.keys())
+            trie.link_chain(consonant_and_positions[2], right_consonant_node, found_cluster.keys())
         # if len(cluster_right) > 0 and consonant_and_positions[3] is not None and right_consonant_f_node is not None:
-        #     dag_trie.link_chain(consonant_and_positions[3], right_consonant_f_node, found_cluster.keys())
+        #     trie.link_chain(consonant_and_positions[3], right_consonant_f_node, found_cluster.keys())
 
     
     rtl_stroke_boundary_adjacent_nodes = (last_pre_rtl_stroke_boundary_node, last_rtl_stroke_boundary_node)
     return right_consonant_node, right_consonant_f_node, rtl_stroke_boundary_adjacent_nodes if last_rtl_stroke_boundary_node is not None else None
 
 
-def _allow_elide_previous_vowel_using_first_left_consonant(dag_trie: NondeterministicTrie[str, str], phoneme_substroke: Stroke, left_consonant_node: int, last_prevowels_node: Optional[int], last_rtl_stroke_boundary_node: Optional[int]):
+def _allow_elide_previous_vowel_using_first_left_consonant(trie: NondeterministicTrie[str, str], phoneme_substroke: Stroke, left_consonant_node: int, last_prevowels_node: Optional[int], last_rtl_stroke_boundary_node: Optional[int]):
     if last_prevowels_node is not None:
-        dag_trie.link_chain(last_prevowels_node, left_consonant_node, phoneme_substroke.keys())
+        trie.link_chain(last_prevowels_node, left_consonant_node, phoneme_substroke.keys())
 
     if last_rtl_stroke_boundary_node is not None:
-        dag_trie.link_chain(last_rtl_stroke_boundary_node, left_consonant_node, phoneme_substroke.keys())
+        trie.link_chain(last_rtl_stroke_boundary_node, left_consonant_node, phoneme_substroke.keys())
 
-def _allow_elide_previous_vowel_using_first_right_consonant(dag_trie: NondeterministicTrie[str, str], phoneme_substroke: Stroke, right_consonant_node: int, last_pre_rtl_stroke_boundary_node: Optional[int]):
+def _allow_elide_previous_vowel_using_first_right_consonant(trie: NondeterministicTrie[str, str], phoneme_substroke: Stroke, right_consonant_node: int, last_pre_rtl_stroke_boundary_node: Optional[int]):
     if last_pre_rtl_stroke_boundary_node is not None:
-        dag_trie.link_chain(last_pre_rtl_stroke_boundary_node, right_consonant_node, phoneme_substroke.keys())
+        trie.link_chain(last_pre_rtl_stroke_boundary_node, right_consonant_node, phoneme_substroke.keys())
 
 
-def _create_lookup_for(dag_trie: NondeterministicTrie[str, str]):
+def _create_lookup_for(trie: NondeterministicTrie[str, str]):
     def lookup(stroke_stenos: tuple[str, ...]):
         # plover.log.info("")
         # plover.log.info("new lookup")
 
-        current_nodes = {dag_trie.ROOT}
+        current_nodes = {trie.ROOT}
 
         for i, stroke_steno in enumerate(stroke_stenos):
             stroke = Stroke.from_steno(stroke_steno)
@@ -256,7 +256,7 @@ def _create_lookup_for(dag_trie: NondeterministicTrie[str, str]):
             if i > 0:
                 # plover.log.info(current_nodes)
                 # plover.log.info(_STROKE_BOUNDARY)
-                current_nodes = dag_trie.get_dst_nodes(current_nodes, _STROKE_BOUNDARY)
+                current_nodes = trie.get_dst_nodes(current_nodes, _STROKE_BOUNDARY)
                 if len(current_nodes) == 0:
                     return None
 
@@ -266,7 +266,7 @@ def _create_lookup_for(dag_trie: NondeterministicTrie[str, str]):
                 left_bank_consonants_keys = left_bank_consonants.keys()
                 # plover.log.info(current_nodes)
                 # plover.log.info(left_bank_consonants_keys)
-                current_nodes = dag_trie.get_dst_nodes_chain(current_nodes, left_bank_consonants_keys)
+                current_nodes = trie.get_dst_nodes_chain(current_nodes, left_bank_consonants_keys)
 
                 if len(current_nodes) == 0:
                     return None
@@ -275,7 +275,7 @@ def _create_lookup_for(dag_trie: NondeterministicTrie[str, str]):
                 return None
             # plover.log.info(current_nodes)
             # plover.log.info(vowels.rtfcre)
-            current_nodes = dag_trie.get_dst_nodes(current_nodes, vowels.rtfcre)
+            current_nodes = trie.get_dst_nodes(current_nodes, vowels.rtfcre)
             if len(current_nodes) == 0:
                 return None
 
@@ -283,10 +283,10 @@ def _create_lookup_for(dag_trie: NondeterministicTrie[str, str]):
                 right_bank_consonants_keys = right_bank_consonants.keys()
                 # plover.log.info(current_nodes)
                 # plover.log.info(right_bank_consonants_keys)
-                current_nodes = dag_trie.get_dst_nodes_chain(current_nodes, right_bank_consonants_keys)
+                current_nodes = trie.get_dst_nodes_chain(current_nodes, right_bank_consonants_keys)
                 if len(current_nodes) == 0:
                     return None
 
-        return dag_trie.get_translation(current_nodes)
+        return trie.get_translation(current_nodes)
 
     return lookup

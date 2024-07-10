@@ -16,7 +16,7 @@ class WriteoutsDictionary(StenoDictionary):
         self.__maybe_lookup: Optional[Callable[[tuple[str, ...]], Optional[str]]] = None
 
     def _load(self, filepath: str):
-        from .lib.DictionaryTrieBuilder import build_lookup
+        from .lib.build_lookup import build_lookup
 
         with open(filepath, "r") as file:
             map: dict[str, str] = json.load(file)

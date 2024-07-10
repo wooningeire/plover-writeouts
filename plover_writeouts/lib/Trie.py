@@ -56,7 +56,7 @@ class Trie(Generic[K, V]):
 
 # export const machine = createMachine({
 #   context: {},
-#   id: "dag_trie",
+#   id: "trie",
 #   initial: "0",
 #   states: {
 # """ +
@@ -70,6 +70,7 @@ class Trie(Generic[K, V]):
 #   },
 # }).withConfig({});
 # """)
+
 class NondeterministicTrie(Generic[K, V]):
     """A trie that can be in multiple states at once."""
 
