@@ -4,7 +4,7 @@ from typing import Optional
 
 from plover.steno import Stroke
 
-from .DagTrie import DagTrie
+from .DagTrie import Trie, NondeterministicTrie
 
 class Phoneme(Enum):
     S = auto()
@@ -110,7 +110,7 @@ _CONSONANT_CHORDS: dict[Stroke, Phoneme] = {
     },
 }
 
-_consonants_trie: DagTrie[str, Phoneme] = DagTrie()
+_consonants_trie: Trie[str, Phoneme] = Trie()
 for _stroke, _phoneme in _CONSONANT_CHORDS.items():
     _current_head = _consonants_trie.get_dst_node_else_create_chain(_consonants_trie.ROOT, _stroke.keys())
     _consonants_trie.set_translation(_current_head, _phoneme)
