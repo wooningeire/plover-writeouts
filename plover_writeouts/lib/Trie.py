@@ -108,6 +108,7 @@ class NondeterministicTrie(Generic[K, V]):
         current_nodes = src_nodes
         for key in keys:
             current_nodes = self.get_dst_nodes(current_nodes, key)
+            # plover.log.debug(f"\t{key}\t {current_nodes}")
             if len(current_nodes) == 0:
                 return current_nodes
         return current_nodes

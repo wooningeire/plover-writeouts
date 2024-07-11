@@ -2,6 +2,7 @@ from typing import Optional, Callable
 import json
 
 from plover.steno_dictionary import StenoDictionary
+import plover.log
 
 class WriteoutsDictionary(StenoDictionary):
     readonly = True
@@ -18,7 +19,7 @@ class WriteoutsDictionary(StenoDictionary):
     def _load(self, filepath: str):
         from .lib.build_lookup import build_lookup
 
-        with open(filepath, "r") as file:
+        with open(filepath, "r", encoding="utf-8") as file:
             map: dict[str, str] = json.load(file)
 
         self.__maybe_lookup = build_lookup(map)

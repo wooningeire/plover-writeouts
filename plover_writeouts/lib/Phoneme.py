@@ -30,11 +30,15 @@ class Phoneme(Enum):
     CH = auto()
     SH = auto()
     TH = auto()
+    
+    DUMMY = auto()
 
 
 PHONEMES_TO_CHORDS_LEFT: dict[Phoneme, Stroke] = {
     phoneme: Stroke.from_steno(steno)
     for phoneme, steno in {
+        Phoneme.DUMMY: "#",
+
         Phoneme.S: "S",
         Phoneme.T: "T",
         Phoneme.K: "K",
@@ -64,6 +68,8 @@ PHONEMES_TO_CHORDS_LEFT: dict[Phoneme, Stroke] = {
 PHONEMES_TO_CHORDS_RIGHT: dict[Phoneme, Stroke] = {
     phoneme: Stroke.from_steno(steno)
     for phoneme, steno in {
+        Phoneme.DUMMY: "",
+
         Phoneme.F: "-F",
         Phoneme.R: "-R",
         Phoneme.P: "-P",
