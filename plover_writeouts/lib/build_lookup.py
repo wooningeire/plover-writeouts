@@ -6,7 +6,7 @@ import plover.log
 from .Trie import Trie, NondeterministicTrie
 from .Phoneme import Phoneme, split_consonant_phonemes, PHONEMES_TO_CHORDS_LEFT, PHONEMES_TO_CHORDS_RIGHT, PHONEMES_TO_CHORDS_RIGHT_F
 
-_LEFT_BANK_CONSONANTS_SUBSTROKE = Stroke.from_steno("#STKPWHR")
+_LEFT_BANK_CONSONANTS_SUBSTROKE = Stroke.from_steno("#^STKPWHR")
 _VOWELS_SUBSTROKE = Stroke.from_steno("AOEU")
 _RIGHT_BANK_CONSONANTS_SUBSTROKE = Stroke.from_steno("-FRPBLGTSDZ")
 
@@ -87,6 +87,8 @@ def _add_entry(trie: NondeterministicTrie[str, str], outline_steno: str, transla
 
 
                 left_consonant_node = trie.get_first_dst_node_else_create_chain(next_left_consonant_src_node, PHONEMES_TO_CHORDS_LEFT[consonant].keys())
+                if last_rtl_stroke_boundary_node is not None:
+                    trie.link_chain(last_rtl_stroke_boundary_node, left_consonant_node, PHONEMES_TO_CHORDS_LEFT[consonant].keys())
 
 
                 @_if_cluster_found(cluster_consonants, cluster_consonant_nodes)
@@ -117,10 +119,14 @@ def _add_entry(trie: NondeterministicTrie[str, str], outline_steno: str, transla
             last_prevowel_node = next_left_consonant_src_node
             # can't really do anything all that special with vowels, so only proceed through a vowel transition
             # if it matches verbatim
-            postvowel_node = trie.get_first_dst_node_else_create(next_left_consonant_src_node, vowels.rtfcre)
+            if n_previous_syllable_consonants == 0:
+                postlinker_node = trie.get_first_dst_node_else_create(next_left_consonant_src_node, _LINKER_CHORD.keys())
+                postvowels_node = trie.get_first_dst_node_else_create(postlinker_node, vowels.rtfcre)
+            else:
+                postvowels_node = trie.get_first_dst_node_else_create(next_left_consonant_src_node, vowels.rtfcre)
 
-            next_left_consonant_src_node = trie.get_first_dst_node_else_create(postvowel_node, _STROKE_BOUNDARY)
-            next_right_consonant_src_node = postvowel_node
+            next_right_consonant_src_node = postvowels_node
+            next_left_consonant_src_node = trie.get_first_dst_node_else_create(postvowels_node, _STROKE_BOUNDARY)
 
             prev_left_consonant_node = None
 
@@ -210,12 +216,9 @@ def _add_right_consonant(
     rtl_stroke_boundary_node = None
 
     if left_consonant_node is not None and consonant is not Phoneme.DUMMY:
-        if is_last_consonant:
-            pre_rtl_stroke_boundary_node = right_consonant_node
-            rtl_stroke_boundary_node = trie.get_first_dst_node_else_create(right_consonant_node, _STROKE_BOUNDARY)
-            trie.link_chain(rtl_stroke_boundary_node, left_consonant_node, _LINKER_CHORD.keys())
-        else:
-            trie.link(right_consonant_node, left_consonant_node, _STROKE_BOUNDARY)
+        pre_rtl_stroke_boundary_node = right_consonant_node
+        rtl_stroke_boundary_node = trie.get_first_dst_node_else_create(right_consonant_node, _STROKE_BOUNDARY)
+        trie.link_chain(rtl_stroke_boundary_node, left_consonant_node, _LINKER_CHORD.keys())
         
 
     if is_first_consonant:
