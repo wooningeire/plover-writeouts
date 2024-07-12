@@ -119,7 +119,7 @@ def _add_entry(trie: NondeterministicTrie[str, str], outline_steno: str, transla
             last_prevowel_node = next_left_consonant_src_node
             # can't really do anything all that special with vowels, so only proceed through a vowel transition
             # if it matches verbatim
-            if n_previous_syllable_consonants == 0:
+            if n_previous_syllable_consonants == 0 and not is_starting_consonants:
                 postlinker_node = trie.get_first_dst_node_else_create(next_left_consonant_src_node, _LINKER_CHORD.keys())
                 postvowels_node = trie.get_first_dst_node_else_create(postlinker_node, vowels.rtfcre)
             else:
