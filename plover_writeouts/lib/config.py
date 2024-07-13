@@ -1,10 +1,7 @@
-from collections import defaultdict
 from enum import Enum, auto
-from typing import Optional
 
 from plover.steno import Stroke
 
-from .Trie import Trie, NondeterministicTrie
 
 class Phoneme(Enum):
     S = auto()
@@ -32,6 +29,11 @@ class Phoneme(Enum):
     TH = auto()
     
     DUMMY = auto()
+
+
+LEFT_BANK_CONSONANTS_SUBSTROKE = Stroke.from_steno("#^STKPWHR")
+VOWELS_SUBSTROKE = Stroke.from_steno("AOEU")
+RIGHT_BANK_CONSONANTS_SUBSTROKE = Stroke.from_steno("-FRPBLGTSDZ")
 
 
 PHONEMES_TO_CHORDS_LEFT: dict[Phoneme, Stroke] = {
@@ -109,52 +111,19 @@ PHONEMES_TO_CHORDS_RIGHT_F: dict[Phoneme, Stroke] = {
     }.items()
 }
 
-_CONSONANT_CHORDS: dict[Stroke, Phoneme] = {
-    **{
-        stroke: phoneme
-        for phoneme, stroke in PHONEMES_TO_CHORDS_LEFT.items()
-    },
-    **{
-        stroke: phoneme
-        for phoneme, stroke in PHONEMES_TO_CHORDS_RIGHT.items()
-    },
+LINKER_CHORD = Stroke.from_steno("SWH")
+
+CLUSTERS: dict[tuple[Phoneme, ...], Stroke] = {
+    phonemes: Stroke.from_steno(steno)
+    for phonemes, steno in {
+        (Phoneme.D, Phoneme.S): "STK",
+        (Phoneme.L, Phoneme.F): "-FL",
+        (Phoneme.G, Phoneme.L): "-LG",
+    }.items()
 }
 
-_consonants_trie: Trie[str, Phoneme] = Trie()
-for _stroke, _phoneme in _CONSONANT_CHORDS.items():
-    _current_head = _consonants_trie.get_dst_node_else_create_chain(_consonants_trie.ROOT, _stroke.keys())
-    _consonants_trie.set_translation(_current_head, _phoneme)
 
-def split_consonant_phonemes(consonants_stroke: Stroke):
-    entries_found: list[Phoneme] = []
+TRIE_STROKE_BOUNDARY_KEY = ""
 
-    keys = consonants_stroke.keys()
-    
-    chord_start_index = 0
-    while chord_start_index < len(keys):
-        current_node = _consonants_trie.ROOT
 
-        longest_chord_end_index = chord_start_index
-
-        entry: Optional[Phoneme] = None
-
-        for seek_index in range(chord_start_index, len(keys)):
-            key = keys[seek_index]
-            
-            current_node = _consonants_trie.get_dst_node(current_node, key)
-            if current_node is None:
-                break
-
-            new_entry = _consonants_trie.get_translation(current_node)
-            if new_entry is None:
-                continue
-        
-            entry = new_entry
-            longest_chord_end_index = seek_index
-
-        if entry is not None:
-            entries_found.append(entry)
-
-        chord_start_index = longest_chord_end_index + 1
-
-    return tuple(entries_found)
+OPTIMIZE_TRIE_SPACE = True
