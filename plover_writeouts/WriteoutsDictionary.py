@@ -1,6 +1,7 @@
 from typing import Optional, Callable
 import json
 
+from plover.steno import Stroke
 from plover.steno_dictionary import StenoDictionary
 import plover.log
 

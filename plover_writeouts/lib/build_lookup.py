@@ -45,9 +45,9 @@ def build_lookup(mappings: dict[str, str]):
     for outline_steno, translation in mappings.items():
         _add_entry(trie, outline_steno, translation)
 
-    # plover.log.debug(str(trie))
+    # plover.log.debug(str(trie.optimized()))
 
-    return _create_lookup_for(trie)
+    return _create_lookup_for(trie.optimized())
 
 def _add_entry(trie: NondeterministicTrie[str, str], outline_steno: str, translation: str):
     current_syllable_consonants: list[Phoneme] = []
@@ -120,7 +120,7 @@ def _add_entry(trie: NondeterministicTrie[str, str], outline_steno: str, transla
             # can't really do anything all that special with vowels, so only proceed through a vowel transition
             # if it matches verbatim
             if n_previous_syllable_consonants == 0 and not is_starting_consonants:
-                postlinker_node = trie.get_first_dst_node_else_create(next_left_consonant_src_node, _LINKER_CHORD.keys())
+                postlinker_node = trie.get_first_dst_node_else_create_chain(next_left_consonant_src_node, _LINKER_CHORD.keys())
                 postvowels_node = trie.get_first_dst_node_else_create(postlinker_node, vowels.rtfcre)
             else:
                 postvowels_node = trie.get_first_dst_node_else_create(next_left_consonant_src_node, vowels.rtfcre)
