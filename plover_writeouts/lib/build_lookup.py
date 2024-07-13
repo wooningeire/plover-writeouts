@@ -6,17 +6,20 @@ import plover.log
 from .Trie import Trie, NondeterministicTrie
 from .phoneme_util import split_consonant_phonemes
 from .config import (
-    OPTIMIZE_TRIE_SPACE,
     Phoneme,
     LEFT_BANK_CONSONANTS_SUBSTROKE,
     VOWELS_SUBSTROKE,
     RIGHT_BANK_CONSONANTS_SUBSTROKE,
+    ASTERISK_SUBSTROKE,
     TRIE_STROKE_BOUNDARY_KEY,
+    TRIE_LINKER_KEY,
     LINKER_CHORD,
+    # INITIAL_VOWEL_CHORD,
     CLUSTERS,
     PHONEMES_TO_CHORDS_LEFT,
     PHONEMES_TO_CHORDS_RIGHT,
     PHONEMES_TO_CHORDS_RIGHT_F,
+    OPTIMIZE_TRIE_SPACE,
 )
 
 
@@ -24,8 +27,9 @@ def _split_stroke_parts(stroke: Stroke):
     left_bank_consonants = stroke & LEFT_BANK_CONSONANTS_SUBSTROKE
     vowels = stroke & VOWELS_SUBSTROKE
     right_bank_consonants = stroke & RIGHT_BANK_CONSONANTS_SUBSTROKE
+    asterisk = stroke & ASTERISK_SUBSTROKE
 
-    return left_bank_consonants, vowels, right_bank_consonants
+    return left_bank_consonants, vowels, right_bank_consonants, asterisk
 
 
 _clusters_trie: Trie[Phoneme, Stroke] = Trie()
@@ -67,10 +71,14 @@ def _add_entry(trie: NondeterministicTrie[str, str], outline_steno: str, transla
     cluster_consonants: list[tuple[Phoneme, Optional[int], Optional[int], Optional[int]]] = []
     cluster_consonant_nodes: list[int] = []
 
-    for stroke_steno in outline_steno.split("/"):
+    strokes_steno = outline_steno.split("/")
+    for j, stroke_steno in enumerate(strokes_steno):
         stroke = Stroke.from_steno(stroke_steno)
 
-        left_bank_consonants, vowels, right_bank_consonants = _split_stroke_parts(stroke)
+
+        left_bank_consonants, vowels, right_bank_consonants, asterisk = _split_stroke_parts(stroke)
+        if len(asterisk) > 0:
+            return
 
 
         current_syllable_consonants.extend(split_consonant_phonemes(left_bank_consonants))
@@ -121,13 +129,17 @@ def _add_entry(trie: NondeterministicTrie[str, str], outline_steno: str, transla
             # can't really do anything all that special with vowels, so only proceed through a vowel transition
             # if it matches verbatim
             if n_previous_syllable_consonants == 0 and not is_starting_consonants:
-                postlinker_node = trie.get_first_dst_node_else_create_chain(next_left_consonant_src_node, LINKER_CHORD.keys())
+                postlinker_node = trie.get_first_dst_node_else_create(next_left_consonant_src_node, TRIE_LINKER_KEY)
                 postvowels_node = trie.get_first_dst_node_else_create(postlinker_node, vowels.rtfcre)
             else:
                 postvowels_node = trie.get_first_dst_node_else_create(next_left_consonant_src_node, vowels.rtfcre)
 
+
             next_right_consonant_src_node = postvowels_node
             next_left_consonant_src_node = trie.get_first_dst_node_else_create(postvowels_node, TRIE_STROKE_BOUNDARY_KEY)
+
+            # if INITIAL_VOWEL_CHORD is not None and n_previous_syllable_consonants == 0 and is_starting_consonants:
+            #     trie.link_chain(trie.ROOT, next_left_consonant_src_node, INITIAL_VOWEL_CHORD.keys())
 
             prev_left_consonant_node = None
 
@@ -223,7 +235,7 @@ def _add_right_consonant(
     if left_consonant_node is not None and consonant is not Phoneme.DUMMY:
         pre_rtl_stroke_boundary_node = right_consonant_node
         rtl_stroke_boundary_node = trie.get_first_dst_node_else_create(right_consonant_node, TRIE_STROKE_BOUNDARY_KEY)
-        trie.link_chain(rtl_stroke_boundary_node, left_consonant_node, LINKER_CHORD.keys())
+        trie.link(rtl_stroke_boundary_node, left_consonant_node, TRIE_LINKER_KEY)
         
 
     if is_first_consonant:
@@ -253,8 +265,8 @@ def _add_right_consonant(
         cluster_right = found_cluster & RIGHT_BANK_CONSONANTS_SUBSTROKE
         if len(cluster_right) > 0 and consonant_and_positions[2] is not None:
             trie.link_chain(consonant_and_positions[2], right_consonant_node, found_cluster.keys())
-        # if len(cluster_right) > 0 and consonant_and_positions[3] is not None and right_consonant_f_node is not None:
-        #     trie.link_chain(consonant_and_positions[3], right_consonant_f_node, found_cluster.keys())
+        if len(cluster_right) > 0 and consonant_and_positions[3] is not None and right_consonant_f_node is not None:
+            trie.link_chain(consonant_and_positions[3], right_consonant_f_node, found_cluster.keys())
 
     
     rtl_stroke_boundary_adjacent_nodes = (pre_rtl_stroke_boundary_node, rtl_stroke_boundary_node)
@@ -292,12 +304,15 @@ def _create_lookup_for(trie: NondeterministicTrie[str, str]):
                 if len(current_nodes) == 0:
                     return None
 
-            left_bank_consonants, vowels, right_bank_consonants = _split_stroke_parts(stroke)
+            left_bank_consonants, vowels, right_bank_consonants, asterisk = _split_stroke_parts(stroke)
 
             if len(left_bank_consonants) > 0:
                 # plover.log.debug(current_nodes)
                 # plover.log.debug(left_bank_consonants.keys())
-                current_nodes = trie.get_dst_nodes_chain(current_nodes, left_bank_consonants.keys())
+                if left_bank_consonants == LINKER_CHORD:
+                    current_nodes = {*trie.get_dst_nodes_chain(current_nodes, left_bank_consonants.keys()), *trie.get_dst_nodes(current_nodes, TRIE_LINKER_KEY)}
+                else:
+                    current_nodes = trie.get_dst_nodes_chain(current_nodes, left_bank_consonants.keys())
 
                 if len(current_nodes) == 0:
                     return None
@@ -315,6 +330,9 @@ def _create_lookup_for(trie: NondeterministicTrie[str, str]):
                 current_nodes = trie.get_dst_nodes_chain(current_nodes, right_bank_consonants.keys())
                 if len(current_nodes) == 0:
                     return None
+                
+            if len(asterisk) > 0:
+                current_nodes = trie.get_dst_nodes_chain(current_nodes, asterisk.keys())
 
         return trie.get_translation(current_nodes)
 

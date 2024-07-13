@@ -3,7 +3,7 @@ from typing import Generic, Optional, TypeVar
 from plover.steno import Stroke
 import plover.log
 
-from .config import TRIE_STROKE_BOUNDARY_KEY
+from .config import TRIE_STROKE_BOUNDARY_KEY, TRIE_LINKER_KEY, LINKER_CHORD
 
 S = TypeVar("S")
 T = TypeVar("T")
@@ -62,27 +62,24 @@ class Trie(Generic[K, V]):
         self.__keys[key] = new_key_id
         return new_key_id
 
-#     def to_xstate(self):
-#         return (
-#             """
-# import { createMachine } from "xstate";
+    def __str__(self):
+        lines: list[str] = []
 
-# export const machine = createMachine({
-#   context: {},
-#   id: "trie",
-#   initial: "0",
-#   states: {
-# """ +
-#             "".join(f"""    "{i}": {{
-#       on: {{
-#         {" ".join(f'"{trigger}": {{ target: "{dst_node}" }},' for trigger, dst_node in transitions.items())}
-#       }},
-#     }},
-# """ for i, transitions in enumerate(self.__nodes)) +
-# """
-#   },
-# }).withConfig({});
-# """)
+        key_ids_to_keys = self.__key_ids_to_keys()
+
+        for i, transitions in enumerate(self.__nodes):
+            translation = self.__translations.get(i, None)
+            lines.append(f"""{i}{f" : {translation}" if translation is not None else ""}""")
+            for key_id, dst_node in transitions.items():
+                lines.append(f"""\t{key_ids_to_keys[key_id]}\t ->\t {dst_node}""")
+
+        return "\n".join(lines)
+    
+    def __key_ids_to_keys(self):
+        return {
+            key_id: key
+            for key, key_id in self.__keys.items()
+        }
 
 class NondeterministicTrie(Generic[K, V]):
     """A trie that can be in multiple states at once."""
@@ -95,7 +92,7 @@ class NondeterministicTrie(Generic[K, V]):
         self.__keys: dict[K, int] = {}
 
     def get_first_dst_node_else_create(self, src_node: int, key: K) -> int:
-        key_id = self.__get_key_id(key)
+        key_id = self.__get_key_id_else_create(key)
 
         transitions = self.__nodes[src_node]
         if key_id in transitions:
@@ -115,7 +112,7 @@ class NondeterministicTrie(Generic[K, V]):
         return set(
             node
             for src_node in src_nodes
-            for node in self.__nodes[src_node].get(self.__get_key_id(key), [])
+            for node in self.__nodes[src_node].get(self.__get_key_id_else_create(key), [])
         )
     
     def get_dst_nodes_chain(self, src_nodes: set[int], keys: tuple[K, ...]):
@@ -128,7 +125,7 @@ class NondeterministicTrie(Generic[K, V]):
         return current_nodes
     
     def link(self, src_node: int, dst_node: int, key: K):
-        key_id = self.__get_key_id(key)
+        key_id = self.__get_key_id_else_create(key)
         
         if key_id in self.__nodes[src_node]: # and dst_node not in self.__nodes[src_node][key]
             self.__nodes[src_node][key_id].append(dst_node)
@@ -171,20 +168,20 @@ class NondeterministicTrie(Generic[K, V]):
         return "\n".join(lines)
     
     def optimized(self: "NondeterministicTrie[str, str]"):
-        # from pympler.asizeof import asizeof
+        from pympler.asizeof import asizeof
 
         new_trie: NondeterministicTrie[str, str] = NondeterministicTrie()
         self.__transfer_node_and_descendants_if_necessary(new_trie, self.ROOT, {0: 0}, Stroke.from_keys(()), set(), {0}, self.__key_ids_to_keys())
-#         plover.log.debug(f"""
+        plover.log.debug(f"""
 
-# Optimized lookup trie.
-# \t{self.__n_nodes():,} nodes, {self.__n_transitions():,} transitions, {self.__n_translations():,} translations ({asizeof(self):,} bytes)
-# \t\t->
-# \t{new_trie.__n_nodes():,} nodes, {new_trie.__n_transitions():,} transitions, {new_trie.__n_translations():,} translations ({asizeof(new_trie):,} bytes)
-# """)
+Optimized lookup trie.
+\t{self.__n_nodes():,} nodes, {self.__n_transitions():,} transitions, {self.__n_translations():,} translations ({asizeof(self):,} bytes)
+\t\t->
+\t{new_trie.__n_nodes():,} nodes, {new_trie.__n_transitions():,} transitions, {new_trie.__n_translations():,} translations ({asizeof(new_trie):,} bytes)
+""")
         return new_trie
     
-    def __get_key_id(self, key: K):
+    def __get_key_id_else_create(self, key: K):
         if key in self.__keys:
             return self.__keys[key]
         
@@ -232,6 +229,8 @@ class NondeterministicTrie(Generic[K, V]):
         for key_id, dst_nodes in self.__nodes[orig_node_id].items():
             if key_id == self.__keys[TRIE_STROKE_BOUNDARY_KEY]:
                 new_stroke = Stroke.from_keys(())
+            elif key_id == self.__keys[TRIE_LINKER_KEY]:
+                new_stroke = LINKER_CHORD
             else:
                 new_key_stroke = Stroke.from_steno(key_ids_to_keys[key_id])
                 if latest_key_stroke is not None and len(new_key_stroke) > 0 and latest_key_stroke >= Stroke.from_keys((new_key_stroke.keys()[0],)):

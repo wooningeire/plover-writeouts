@@ -1,4 +1,5 @@
 from enum import Enum, auto
+from typing import Optional
 
 from plover.steno import Stroke
 
@@ -27,13 +28,17 @@ class Phoneme(Enum):
     CH = auto()
     SH = auto()
     TH = auto()
+
+    EU = auto()
+    AOE = auto()
     
     DUMMY = auto()
 
 
-LEFT_BANK_CONSONANTS_SUBSTROKE = Stroke.from_steno("#^STKPWHR")
+LEFT_BANK_CONSONANTS_SUBSTROKE = Stroke.from_steno("#@^+STKPWHR")
 VOWELS_SUBSTROKE = Stroke.from_steno("AOEU")
 RIGHT_BANK_CONSONANTS_SUBSTROKE = Stroke.from_steno("-FRPBLGTSDZ")
+ASTERISK_SUBSTROKE = Stroke.from_steno("*")
 
 
 PHONEMES_TO_CHORDS_LEFT: dict[Phoneme, Stroke] = {
@@ -112,6 +117,8 @@ PHONEMES_TO_CHORDS_RIGHT_F: dict[Phoneme, Stroke] = {
 }
 
 LINKER_CHORD = Stroke.from_steno("SWH")
+assert not (LINKER_CHORD & ~LEFT_BANK_CONSONANTS_SUBSTROKE), "Linker chord must only consist of starter keys"
+# INITIAL_VOWEL_CHORD: Optional[Stroke] = Stroke.from_steno("@")
 
 CLUSTERS: dict[tuple[Phoneme, ...], Stroke] = {
     phonemes: Stroke.from_steno(steno)
@@ -119,11 +126,18 @@ CLUSTERS: dict[tuple[Phoneme, ...], Stroke] = {
         (Phoneme.D, Phoneme.S): "STK",
         (Phoneme.L, Phoneme.F): "-FL",
         (Phoneme.G, Phoneme.L): "-LG",
+        (Phoneme.L, Phoneme.J): "-LG",
+        (Phoneme.N, Phoneme.J): "-PBG",
+        (Phoneme.R, Phoneme.V): "-FRB",
+        (Phoneme.R, Phoneme.CH): "-FRPB",
+        (Phoneme.N, Phoneme.CH): "-FRPBLG",
+        (Phoneme.M, Phoneme.P, Phoneme.T): "-PLT",
     }.items()
 }
 
 
 TRIE_STROKE_BOUNDARY_KEY = ""
+TRIE_LINKER_KEY = "-"
 
 
 OPTIMIZE_TRIE_SPACE = True
