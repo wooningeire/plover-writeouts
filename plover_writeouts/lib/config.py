@@ -136,8 +136,4 @@ CLUSTERS: dict[tuple[Phoneme, ...], Stroke] = {
 }
 
 
-TRIE_STROKE_BOUNDARY_KEY = ""
-TRIE_LINKER_KEY = "-"
-
-
-OPTIMIZE_TRIE_SPACE = True
+OPTIMIZE_TRIE_SPACE = False
