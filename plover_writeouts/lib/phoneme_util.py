@@ -1,5 +1,5 @@
 from enum import Enum, auto
-from typing import Optional
+from typing import Generator, Optional
 
 from plover.steno import Stroke
 
@@ -22,7 +22,7 @@ for _stroke, _phoneme in _CONSONANT_CHORDS.items():
     _current_head = _consonants_trie.get_dst_node_else_create_chain(_consonants_trie.ROOT, _stroke.keys())
     _consonants_trie.set_translation(_current_head, _phoneme)
 
-def split_consonant_phonemes(consonants_stroke: Stroke):
+def split_consonant_phonemes_greedy(consonants_stroke: Stroke):
     entries_found: list[Phoneme] = []
 
     keys = consonants_stroke.keys()
@@ -54,4 +54,37 @@ def split_consonant_phonemes(consonants_stroke: Stroke):
 
         chord_start_index = longest_chord_end_index + 1
 
-    return tuple(entries_found)
+    return entries_found
+
+def possible_consonant_phoneme_splits(consonants_stroke: Stroke, chord_start_index=0) -> Generator[tuple[Phoneme, ...], None, None]:
+    keys = consonants_stroke.keys()
+
+    if chord_start_index >= len(keys):
+        yield ()
+        return
+
+    while chord_start_index < len(keys):
+        current_node = _consonants_trie.ROOT
+
+        entry: Optional[Phoneme] = None
+
+        for seek_index in range(chord_start_index, len(keys)):
+            key = keys[seek_index]
+            
+            current_node = _consonants_trie.get_dst_node(current_node, key)
+            if current_node is None:
+                break
+
+            new_entry = _consonants_trie.get_translation(current_node)
+            if new_entry is None:
+                continue
+
+            for split in possible_consonant_phoneme_splits(consonants_stroke, seek_index + 1):
+                yield (new_entry, *split)
+            
+            entry = new_entry
+
+        if entry is not None:
+            break
+
+        chord_start_index += 1

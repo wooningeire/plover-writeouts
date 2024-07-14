@@ -4,7 +4,7 @@ from plover.steno import Stroke
 import plover.log
 
 from .Trie import Trie, NondeterministicTrie
-from .phoneme_util import split_consonant_phonemes
+from .phoneme_util import split_consonant_phonemes_greedy
 from .config import (
     Phoneme,
     LEFT_BANK_CONSONANTS_SUBSTROKE,
@@ -20,7 +20,9 @@ from .config import (
     PHONEMES_TO_CHORDS_RIGHT,
     PHONEMES_TO_CHORDS_RIGHT_F,
     OPTIMIZE_TRIE_SPACE,
+    USE_PHONEME_TRANSITIONS,
 )
+from .build_phoneme_trie import build_phoneme_trie
 
 
 def _split_stroke_parts(stroke: Stroke):
@@ -42,6 +44,9 @@ for _phonemes, _stroke in CLUSTERS.items():
 
 
 def build_lookup(mappings: dict[str, str]):
+    return build_phoneme_trie(mappings) if USE_PHONEME_TRANSITIONS else _build_key_trie(mappings)
+
+def _build_key_trie(mappings: dict[str, str]):
     trie: NondeterministicTrie[str, str] = NondeterministicTrie()
 
     for outline_steno, translation in mappings.items():
@@ -50,6 +55,7 @@ def build_lookup(mappings: dict[str, str]):
     # plover.log.debug(str(trie.optimized()))
 
     return _create_lookup_for(trie.optimized() if OPTIMIZE_TRIE_SPACE else trie)
+
 
 def _add_entry(trie: NondeterministicTrie[str, str], outline_steno: str, translation: str):
     current_syllable_consonants: list[Phoneme] = []
@@ -71,8 +77,7 @@ def _add_entry(trie: NondeterministicTrie[str, str], outline_steno: str, transla
     cluster_consonants: list[tuple[Phoneme, Optional[int], Optional[int], Optional[int]]] = []
     cluster_consonant_nodes: list[int] = []
 
-    strokes_steno = outline_steno.split("/")
-    for j, stroke_steno in enumerate(strokes_steno):
+    for stroke_steno in outline_steno.split("/"):
         stroke = Stroke.from_steno(stroke_steno)
 
 
@@ -81,7 +86,7 @@ def _add_entry(trie: NondeterministicTrie[str, str], outline_steno: str, transla
             return
 
 
-        current_syllable_consonants.extend(split_consonant_phonemes(left_bank_consonants))
+        current_syllable_consonants.extend(split_consonant_phonemes_greedy(left_bank_consonants))
 
 
         if len(vowels) > 0:
@@ -146,7 +151,7 @@ def _add_entry(trie: NondeterministicTrie[str, str], outline_steno: str, transla
             is_starting_consonants = False
 
 
-        current_syllable_consonants.extend(split_consonant_phonemes(right_bank_consonants))
+        current_syllable_consonants.extend(split_consonant_phonemes_greedy(right_bank_consonants))
 
 
     for i, consonant in enumerate(current_syllable_consonants):

@@ -1,4 +1,4 @@
-from typing import Generic, Optional, TypeVar
+from typing import Generic, Iterable, Optional, TypeVar
 
 from plover.steno import Stroke
 import plover.log
@@ -31,7 +31,7 @@ class Trie(Generic[K, V]):
 
         return new_node_id
 
-    def get_dst_node_else_create_chain(self, src_node: int, keys: tuple[K, ...]):
+    def get_dst_node_else_create_chain(self, src_node: int, keys: Iterable[K]):
         current_node = src_node
         for key in keys:
             current_node = self.get_dst_node_else_create(current_node, key)
@@ -40,7 +40,7 @@ class Trie(Generic[K, V]):
     def get_dst_node(self, src_node: int, key: K):
         return self.__nodes[src_node].get(self.__get_key_id(key))
     
-    def get_dst_node_chain(self, src_node: int, keys: tuple[K, ...]):
+    def get_dst_node_chain(self, src_node: int, keys: Iterable[K]):
         current_node = src_node
         for stroke in keys:
             current_node = self.get_dst_node(current_node, stroke)
@@ -102,7 +102,7 @@ class NondeterministicTrie(Generic[K, V]):
         transitions[key_id] = [new_node_id]
         return new_node_id
 
-    def get_first_dst_node_else_create_chain(self, src_node: int, keys: tuple[K, ...]) -> int:
+    def get_first_dst_node_else_create_chain(self, src_node: int, keys: Iterable[K]) -> int:
         current_node = src_node
         for key in keys:
             current_node = self.get_first_dst_node_else_create(current_node, key)
@@ -115,7 +115,7 @@ class NondeterministicTrie(Generic[K, V]):
             for node in self.__nodes[src_node].get(self.__get_key_id_else_create(key), [])
         )
     
-    def get_dst_nodes_chain(self, src_nodes: set[int], keys: tuple[K, ...]):
+    def get_dst_nodes_chain(self, src_nodes: set[int], keys: Iterable[K]):
         current_nodes = src_nodes
         for key in keys:
             current_nodes = self.get_dst_nodes(current_nodes, key)
@@ -168,18 +168,20 @@ class NondeterministicTrie(Generic[K, V]):
         return "\n".join(lines)
     
     def optimized(self: "NondeterministicTrie[str, str]"):
-        from pympler.asizeof import asizeof
-
         new_trie: NondeterministicTrie[str, str] = NondeterministicTrie()
         self.__transfer_node_and_descendants_if_necessary(new_trie, self.ROOT, {0: 0}, Stroke.from_keys(()), set(), {0}, self.__key_ids_to_keys())
         plover.log.debug(f"""
 
 Optimized lookup trie.
-\t{self.__n_nodes():,} nodes, {self.__n_transitions():,} transitions, {self.__n_translations():,} translations ({asizeof(self):,} bytes)
+\t{self.profile()}
 \t\t->
-\t{new_trie.__n_nodes():,} nodes, {new_trie.__n_transitions():,} transitions, {new_trie.__n_translations():,} translations ({asizeof(new_trie):,} bytes)
+\t{new_trie.profile()}
 """)
         return new_trie
+    
+    def profile(self):
+        from pympler.asizeof import asizeof
+        return f"{self.__n_nodes():,} nodes, {self.__n_transitions():,} transitions, {self.__n_translations():,} translations ({asizeof(self):,} bytes)"
     
     def __get_key_id_else_create(self, key: K):
         if key in self.__keys:
