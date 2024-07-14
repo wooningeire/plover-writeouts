@@ -17,10 +17,14 @@ _CONSONANT_CHORDS: dict[Stroke, Phoneme] = {
     },
 }
 
-_consonants_trie: Trie[str, Phoneme] = Trie()
-for _stroke, _phoneme in _CONSONANT_CHORDS.items():
-    _current_head = _consonants_trie.get_dst_node_else_create_chain(_consonants_trie.ROOT, _stroke.keys())
-    _consonants_trie.set_translation(_current_head, _phoneme)
+def _build_consonants_trie():
+    consonants_trie: Trie[str, Phoneme] = Trie()
+    for stroke, _phoneme in _CONSONANT_CHORDS.items():
+        current_head = consonants_trie.get_dst_node_else_create_chain(consonants_trie.ROOT, stroke.keys())
+        consonants_trie.set_translation(current_head, _phoneme)
+    return consonants_trie.frozen()
+_consonants_trie = _build_consonants_trie()
+
 
 def split_consonant_phonemes(consonants_stroke: Stroke):
     entries_found: list[Phoneme] = []

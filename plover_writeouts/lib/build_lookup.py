@@ -3,7 +3,7 @@ from typing import Callable, Optional
 from plover.steno import Stroke
 import plover.log
 
-from .Trie import Trie, NondeterministicTrie
+from .Trie import Trie, NondeterministicTrie, ReadonlyNondeterministicTrie
 from .phoneme_util import split_consonant_phonemes
 from .config import (
     Phoneme,
@@ -32,13 +32,16 @@ def _split_stroke_parts(stroke: Stroke):
     return left_bank_consonants, vowels, right_bank_consonants, asterisk
 
 
-_clusters_trie: Trie[Phoneme, Stroke] = Trie()
-for _phonemes, _stroke in CLUSTERS.items():
-    _current_head = _clusters_trie.ROOT
-    for key in _phonemes:
-        _current_head = _clusters_trie.get_dst_node_else_create(_current_head, key)
-    
-    _clusters_trie.set_translation(_current_head, _stroke)
+def _build_clusters_trie():
+    clusters_trie: Trie[Phoneme, Stroke] = Trie()
+    for phonemes, stroke in CLUSTERS.items():
+        current_head = clusters_trie.ROOT
+        for key in phonemes:
+            current_head = clusters_trie.get_dst_node_else_create(current_head, key)
+
+        clusters_trie.set_translation(current_head, stroke)
+    return clusters_trie.frozen()
+_clusters_trie = _build_clusters_trie()
 
 
 def build_lookup(mappings: dict[str, str]):
@@ -48,8 +51,7 @@ def build_lookup(mappings: dict[str, str]):
         _add_entry(trie, outline_steno, translation)
 
     # plover.log.debug(str(trie.optimized()))
-
-    return _create_lookup_for(trie.optimized() if OPTIMIZE_TRIE_SPACE else trie)
+    return _create_lookup_for((trie.optimized() if OPTIMIZE_TRIE_SPACE else trie).frozen())
 
 def _add_entry(trie: NondeterministicTrie[str, str], outline_steno: str, translation: str):
     current_syllable_consonants: list[Phoneme] = []
@@ -285,7 +287,7 @@ def _allow_elide_previous_vowel_using_first_right_consonant(trie: Nondeterminist
         trie.link_chain(last_pre_rtl_stroke_boundary_node, right_consonant_node, phoneme_substroke.keys())
 
 
-def _create_lookup_for(trie: NondeterministicTrie[str, str]):
+def _create_lookup_for(trie: ReadonlyNondeterministicTrie[str, str]):
     def lookup(stroke_stenos: tuple[str, ...]):
         # plover.log.debug("")
         # plover.log.debug("new lookup")

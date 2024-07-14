@@ -54,6 +54,9 @@ class Trie(Generic[K, V]):
     def get_translation(self, node: int):
         return self.__translations.get(node)
     
+    def frozen(self):
+        return ReadonlyTrie(self.__nodes, self.__translations, self.__keys)
+    
     def __get_key_id(self, key: K):
         if key in self.__keys:
             return self.__keys[key]
@@ -80,14 +83,46 @@ class Trie(Generic[K, V]):
             key_id: key
             for key, key_id in self.__keys.items()
         }
+    
+
+class ReadonlyTrie(Generic[K, V]):
+    ROOT = 0
+
+    def __init__(self, nodes: list[dict[int, int]], translations: dict[int, V], keys: dict[K, int]):
+        self.__nodes: dict[tuple[int, int], int] = {
+            (src_node, key): dst_node
+            for src_node, transitions in enumerate(nodes)
+            for key, dst_node in transitions.items()
+        }
+        self.__translations: dict[int, V] = translations
+        self.__keys: dict[K, int] = keys
+    
+    def get_dst_node(self, src_node: int, key: K):
+        key_id = self.__keys.get(key)
+        if key_id is None:
+            return None
+        
+        return self.__nodes.get((src_node, key_id))
+    
+    def get_dst_node_chain(self, src_node: int, keys: tuple[K, ...]):
+        current_node = src_node
+        for stroke in keys:
+            current_node = self.get_dst_node(current_node, stroke)
+            if current_node is None:
+                return None
+        return current_node
+    
+    def get_translation(self, node: int):
+        return self.__translations.get(node)
+
 
 class NondeterministicTrie(Generic[K, V]):
     """A trie that can be in multiple states at once."""
 
     ROOT = 0
     
-    def __init__(self, *, with_root=True):
-        self.__nodes: list[dict[int, list[int]]] = [{}] if with_root else []
+    def __init__(self):
+        self.__nodes: list[dict[int, list[int]]] = [{}]
         self.__translations: dict[int, V] = {}
         self.__keys: dict[K, int] = {}
 
@@ -146,7 +181,7 @@ class NondeterministicTrie(Generic[K, V]):
         translation = self.__translations.get(node)
         if translation is not None:
             return translation
-    
+
     def get_translation(self, nodes: set[int]):
         for node in nodes:
             translation = self.__translations.get(node)
@@ -168,18 +203,25 @@ class NondeterministicTrie(Generic[K, V]):
         return "\n".join(lines)
     
     def optimized(self: "NondeterministicTrie[str, str]"):
-        from pympler.asizeof import asizeof
-
         new_trie: NondeterministicTrie[str, str] = NondeterministicTrie()
         self.__transfer_node_and_descendants_if_necessary(new_trie, self.ROOT, {0: 0}, Stroke.from_keys(()), set(), {0}, self.__key_ids_to_keys())
-        plover.log.debug(f"""
+#         plover.log.debug(f"""
 
-Optimized lookup trie.
-\t{self.__n_nodes():,} nodes, {self.__n_transitions():,} transitions, {self.__n_translations():,} translations ({asizeof(self):,} bytes)
-\t\t->
-\t{new_trie.__n_nodes():,} nodes, {new_trie.__n_transitions():,} transitions, {new_trie.__n_translations():,} translations ({asizeof(new_trie):,} bytes)
-""")
+# Optimized lookup trie.
+# \t{self.profile()}
+# \t\t->
+# \t{new_trie.profile()}
+# """)
         return new_trie
+    
+
+    def profile(self):
+        from pympler.asizeof import asizeof
+        n_transitions = sum(sum(len(dst_nodes) for dst_nodes in transitions.values()) for transitions in self.__nodes)
+        return f"{len(self.__nodes):,} nodes, {n_transitions:,} transitions, {len(self.__translations):,} translations ({asizeof(self):,} bytes)"
+    
+    def frozen(self):
+        return ReadonlyNondeterministicTrie(self.__nodes, self.__translations, self.__keys)
     
     def __get_key_id_else_create(self, key: K):
         if key in self.__keys:
@@ -248,19 +290,56 @@ Optimized lookup trie.
                 new_trie.link(new_node_id, new_node_mapping[dst_node], key_ids_to_keys[key_id])
 
         return new_node_id is not None
-    
 
-    def __n_nodes(self):
-        return len(self.__nodes)
-    
-    def __n_transitions(self):
-        return sum(sum(len(dst_nodes) for dst_nodes in transitions.values()) for transitions in self.__nodes)
-    
-    def __n_translations(self):
-        return len(self.__translations)
-    
     def __key_ids_to_keys(self):
         return {
             key_id: key
             for key, key_id in self.__keys.items()
         }
+    
+
+class ReadonlyNondeterministicTrie(Generic[K, V]):
+    """A readonly variant of `NondeterministicTrie` that reduces memory usage"""
+
+    ROOT = 0
+
+    def __init__(self, nodes: list[dict[int, list[int]]], translations: dict[int, V], keys: dict[K, int]):
+        self.__nodes: dict[tuple[int, int], tuple[int, ...]] = {
+            (src_node, key): tuple(dst_nodes)
+            for src_node, transitions in enumerate(nodes)
+            for key, dst_nodes in transitions.items()
+        }
+        self.__translations: dict[int, V] = translations
+        self.__keys: dict[K, int] = keys
+
+    def get_dst_nodes(self, src_nodes: set[int], key: K):
+        key_id = self.__keys.get(key)
+        if key_id is None:
+            return set()
+        
+        return set(
+            node
+            for src_node in src_nodes
+            for node in self.__nodes.get((src_node, key_id), ())
+        )
+    
+    def get_dst_nodes_chain(self, src_nodes: set[int], keys: tuple[K, ...]):
+        current_nodes = src_nodes
+        for key in keys:
+            current_nodes = self.get_dst_nodes(current_nodes, key)
+            # plover.log.debug(f"\t{key}\t {current_nodes}")
+            if len(current_nodes) == 0:
+                return current_nodes
+        return current_nodes
+    
+    def get_translation(self, nodes: set[int]):
+        for node in nodes:
+            translation = self.__translations.get(node)
+            if translation is not None:
+                return translation
+        return None
+
+    def profile(self):
+        from pympler.asizeof import asizeof
+        n_transitions = sum(len(dst_nodes) for dst_nodes in self.__nodes.values())
+        return f"{len(self.__nodes):,} nodes, {n_transitions:,} transitions, {len(self.__translations):,} translations ({asizeof(self):,} bytes)"
