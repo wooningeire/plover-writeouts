@@ -3,7 +3,6 @@ from typing import Generic, Optional, TypeVar
 from plover.steno import Stroke
 import plover.log
 
-from .config import LINKER_CHORD
 
 S = TypeVar("S")
 T = TypeVar("T")
@@ -270,17 +269,8 @@ Optimized lookup trie.
                 new_node_mapping[orig_node_id] = new_node_id
 
 
-        if len(current_stroke) > 0:
-            latest_key_stroke = Stroke.from_keys((current_stroke.keys()[-1],))
-        else:
-            latest_key_stroke = None
-
         for key_id, dst_nodes in self.__nodes[orig_node_id].items():
             new_addon_stroke = key_ids_to_keys[key_id]
-            if latest_key_stroke is not None and len(new_addon_stroke) > 0 and latest_key_stroke >= Stroke.from_keys((new_addon_stroke.keys()[0],)):
-                # The new stroke would violate steno order if it continued off the current stroke
-                continue
-
             new_stroke = current_stroke + new_addon_stroke
 
             for dst_node in set(dst_nodes):
@@ -344,4 +334,4 @@ class ReadonlyNondeterministicTrie(Generic[K, V]):
     def profile(self):
         from pympler.asizeof import asizeof
         n_transitions = sum(len(dst_nodes) for dst_nodes in self.__nodes.values())
-        return f"{len(self.__nodes):,} nodes, {n_transitions:,} transitions, {len(self.__translations):,} translations ({asizeof(self):,} bytes)"
+        return f"{max(node[0] for node in self.__nodes.keys()):,} nodes, {n_transitions:,} transitions, {len(self.__translations):,} translations ({asizeof(self):,} bytes)"

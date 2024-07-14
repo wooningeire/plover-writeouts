@@ -94,6 +94,7 @@ PHONEMES_TO_CHORDS_RIGHT: dict[Phoneme, Stroke] = {
         Phoneme.K: "-BG",
         Phoneme.CH: "-FP",
         Phoneme.SH: "-RB",
+        Phoneme.TH: "*T",
         Phoneme.J: "-PBLG",
     }.items()
 
@@ -124,16 +125,23 @@ CLUSTERS: dict[tuple[Phoneme, ...], Stroke] = {
     phonemes: Stroke.from_steno(steno)
     for phonemes, steno in {
         (Phoneme.D, Phoneme.S): "STK",
+        (Phoneme.D, Phoneme.S, Phoneme.K): "STK",
+        (Phoneme.K, Phoneme.N): "K",
         (Phoneme.L, Phoneme.F): "-FL",
         (Phoneme.G, Phoneme.L): "-LG",
         (Phoneme.L, Phoneme.J): "-LG",
+        (Phoneme.L, Phoneme.K): "*LG",
         (Phoneme.N, Phoneme.J): "-PBG",
+        (Phoneme.N, Phoneme.K): "*PBG",
         (Phoneme.R, Phoneme.V): "-FRB",
         (Phoneme.R, Phoneme.CH): "-FRPB",
         (Phoneme.N, Phoneme.CH): "-FRPBLG",
-        (Phoneme.M, Phoneme.P, Phoneme.T): "-PLT",
+        (Phoneme.R, Phoneme.SH): "*RB",
+        (Phoneme.L, Phoneme.SH): "*RB",
+        (Phoneme.N, Phoneme.SH): "*RB",
+        (Phoneme.M, Phoneme.P): "*PL",
     }.items()
 }
 
 
-OPTIMIZE_TRIE_SPACE = False
+OPTIMIZE_TRIE_SPACE = True
