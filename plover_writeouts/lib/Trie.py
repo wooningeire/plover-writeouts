@@ -3,7 +3,8 @@ from typing import Generic, Optional, TypeVar
 from plover.steno import Stroke
 import plover.log
 
-from .config import TRIE_STROKE_BOUNDARY_KEY, TRIE_LINKER_KEY, LINKER_CHORD
+from .config import LINKER_CHORD, TRIE_LINKER_KEY, TRIE_STROKE_BOUNDARY_KEY
+from .util import can_add_stroke_on
 
 S = TypeVar("S")
 T = TypeVar("T")
@@ -38,7 +39,11 @@ class Trie(Generic[K, V]):
         return current_node
     
     def get_dst_node(self, src_node: int, key: K):
-        return self.__nodes[src_node].get(self.__get_key_id(key))
+        key_id = self.__keys.get(key)
+        if key_id is None:
+            return None
+        
+        return self.__nodes[src_node].get(key_id)
     
     def get_dst_node_chain(self, src_node: int, keys: tuple[K, ...]):
         current_node = src_node
@@ -142,12 +147,16 @@ class NondeterministicTrie(Generic[K, V]):
         for key in keys:
             current_node = self.get_first_dst_node_else_create(current_node, key)
         return current_node
-    
+
     def get_dst_nodes(self, src_nodes: set[int], key: K):
+        key_id = self.__keys.get(key)
+        if key_id is None:
+            return set()
+        
         return set(
             node
             for src_node in src_nodes
-            for node in self.__nodes[src_node].get(self.__get_key_id_else_create(key), [])
+            for node in self.__nodes[src_node].get(key_id, [])
         )
     
     def get_dst_nodes_chain(self, src_nodes: set[int], keys: tuple[K, ...]):
@@ -262,12 +271,6 @@ class NondeterministicTrie(Generic[K, V]):
                 new_trie.set_translation(new_node_id, translation)
                 new_node_mapping[orig_node_id] = new_node_id
 
-
-        if len(current_stroke) > 0:
-            latest_key_stroke = Stroke.from_keys((current_stroke.keys()[-1],))
-        else:
-            latest_key_stroke = None
-
         for key_id, dst_nodes in self.__nodes[orig_node_id].items():
             if key_id == self.__keys[TRIE_STROKE_BOUNDARY_KEY]:
                 new_stroke = Stroke.from_keys(())
@@ -275,7 +278,7 @@ class NondeterministicTrie(Generic[K, V]):
                 new_stroke = LINKER_CHORD
             else:
                 new_key_stroke = Stroke.from_steno(key_ids_to_keys[key_id])
-                if latest_key_stroke is not None and len(new_key_stroke) > 0 and latest_key_stroke >= Stroke.from_keys((new_key_stroke.keys()[0],)):
+                if not can_add_stroke_on(current_stroke, new_key_stroke):
                     # The new stroke would violate steno order if it continued off the current stroke
                     continue
 
@@ -327,7 +330,6 @@ class ReadonlyNondeterministicTrie(Generic[K, V]):
         current_nodes = src_nodes
         for key in keys:
             current_nodes = self.get_dst_nodes(current_nodes, key)
-            # plover.log.debug(f"\t{key}\t {current_nodes}")
             if len(current_nodes) == 0:
                 return current_nodes
         return current_nodes
@@ -341,5 +343,6 @@ class ReadonlyNondeterministicTrie(Generic[K, V]):
 
     def profile(self):
         from pympler.asizeof import asizeof
+        n_nodes = max(transition[0] for transition in self.__nodes.keys())
         n_transitions = sum(len(dst_nodes) for dst_nodes in self.__nodes.values())
-        return f"{len(self.__nodes):,} nodes, {n_transitions:,} transitions, {len(self.__translations):,} translations ({asizeof(self):,} bytes)"
+        return f"{n_nodes:,} nodes, {n_transitions:,} transitions, {len(self.__translations):,} translations ({asizeof(self):,} bytes)"
