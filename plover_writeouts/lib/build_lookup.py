@@ -1,4 +1,5 @@
 from typing import Callable, Optional
+from dataclasses import dataclass
 
 from plover.steno import Stroke
 import plover.log
@@ -44,6 +45,16 @@ def _build_clusters_trie():
 _clusters_trie = _build_clusters_trie()
 
 
+@dataclass
+class ClusterOrigin:
+    left: Optional[int]
+    prevowel: Optional[int]
+    rtl_stroke_boundary: Optional[int]
+    pre_rtl_stroke_boundary: Optional[int]
+    right: Optional[int]
+    right_f: Optional[int]
+
+
 def build_lookup(mappings: dict[str, str]):
     trie: NondeterministicTrie[str, str] = NondeterministicTrie()
 
@@ -69,9 +80,7 @@ def _add_entry(trie: NondeterministicTrie[str, str], outline_steno: str, transla
 
     is_first_consonant_set = True
 
-    # Identifying clusters
-    cluster_consonants: list[tuple[Phoneme, Optional[int], Optional[int], Optional[int]]] = []
-    cluster_consonant_nodes: list[int] = []
+    cluster_consonants: list[tuple[Phoneme, ClusterOrigin, int]] = []
 
     for stroke_steno in outline_steno.split("/"):
         stroke = Stroke.from_steno(stroke_steno)
@@ -88,8 +97,17 @@ def _add_entry(trie: NondeterministicTrie[str, str], outline_steno: str, transla
         if len(vowels) > 0:
             # plover.log.debug(current_syllable_consonants)
             for i, consonant in enumerate(current_syllable_consonants):
-                cluster_consonants, cluster_consonant_nodes = _update_cluster_tracking(
-                    cluster_consonants, cluster_consonant_nodes, consonant, next_left_consonant_src_node, next_right_consonant_src_node, last_right_consonant_f_node,
+                cluster_consonants = _update_cluster_tracking(
+                    cluster_consonants,
+                    consonant,
+                    ClusterOrigin(
+                        next_left_consonant_src_node,
+                        last_prevowel_node,
+                        last_rtl_stroke_boundary_node,
+                        last_pre_rtl_stroke_boundary_node,
+                        next_right_consonant_src_node,
+                        last_right_consonant_f_node,
+                    ),
                 )
 
 
@@ -101,12 +119,18 @@ def _add_entry(trie: NondeterministicTrie[str, str], outline_steno: str, transla
                     trie.link_chain(last_rtl_stroke_boundary_node, left_consonant_node, left_stroke_keys)
 
 
-                @_if_cluster_found(cluster_consonants, cluster_consonant_nodes)
-                def add_cluster(consonant_and_positions: tuple[Phoneme, Optional[int], Optional[int], Optional[int]], cluster_stroke: Stroke):
+                @_if_cluster_found(cluster_consonants)
+                def add_cluster(consonant: Phoneme, origin: ClusterOrigin, cluster_stroke: Stroke):
                     cluster_left = cluster_stroke & LEFT_BANK_CONSONANTS_SUBSTROKE
-                    if len(cluster_left) > 0 and consonant_and_positions[1] is not None:
-                        trie.link_chain(consonant_and_positions[1], left_consonant_node, cluster_stroke.keys())
+                    if len(cluster_left) == 0: return
+                    
+                    if origin.left is not None:
+                        trie.link_chain(origin.left, left_consonant_node, cluster_stroke.keys())
 
+                    if not is_first_consonant_set and i == 0 and n_previous_syllable_consonants > 0:
+                        _allow_elide_previous_vowel_using_first_left_consonant(
+                            trie, cluster_stroke, left_consonant_node, origin.prevowel, origin.rtl_stroke_boundary,
+                        )
 
                 if not is_first_consonant_set:
                     if i == 0 and n_previous_syllable_consonants > 0:
@@ -116,7 +140,7 @@ def _add_entry(trie: NondeterministicTrie[str, str], outline_steno: str, transla
 
                     next_right_consonant_src_node, last_right_consonant_f_node, rtl_stroke_boundary_adjacent_nodes = _add_right_consonant(
                         trie, consonant, next_right_consonant_src_node, last_right_consonant_f_node, left_consonant_node, prev_left_consonant_node,
-                        last_pre_rtl_stroke_boundary_node, i == 0, i == len(current_syllable_consonants) - 1, cluster_consonants, cluster_consonant_nodes,
+                        last_pre_rtl_stroke_boundary_node, i == 0, i == len(current_syllable_consonants) - 1, cluster_consonants,
                     )
                     if rtl_stroke_boundary_adjacent_nodes is not None:
                         last_pre_rtl_stroke_boundary_node, last_rtl_stroke_boundary_node = rtl_stroke_boundary_adjacent_nodes
@@ -153,12 +177,11 @@ def _add_entry(trie: NondeterministicTrie[str, str], outline_steno: str, transla
     for i, consonant in enumerate(current_syllable_consonants):
         next_right_consonant_src_node, last_right_consonant_f_node, _ = _add_right_consonant(
             trie, consonant, next_right_consonant_src_node, last_right_consonant_f_node, None, prev_left_consonant_node, last_pre_rtl_stroke_boundary_node,
-            i == 0, i == len(current_syllable_consonants) - 1, cluster_consonants, cluster_consonant_nodes,
+            i == 0, i == len(current_syllable_consonants) - 1, cluster_consonants,
         )
 
         next_left_consonant_src_node = None
 
-    # assert last_right_consonant_node is not None
     if next_right_consonant_src_node is None:
         return
 
@@ -166,38 +189,29 @@ def _add_entry(trie: NondeterministicTrie[str, str], outline_steno: str, transla
 
 
 def _update_cluster_tracking(
-    cluster_consonants: list[tuple[Phoneme, Optional[int], Optional[int], Optional[int]]],
-    cluster_consonant_nodes: list[int],
+    cluster_consonants: list[tuple[Phoneme, ClusterOrigin, int]],
     new_consonant: Phoneme,
-    prev_left_consonant_node: Optional[int],
-    last_right_consonant_node: Optional[int],
-    last_right_consonant_f_node: Optional[int],
+    new_origin: ClusterOrigin,
 ):
     # update cluster identification
-    new_cluster_consonants: list[tuple[Phoneme, Optional[int], Optional[int], Optional[int]]] = []
-    new_cluster_consonant_nodes: list[int] = []
-    for consonant_and_positions, cluster_node in zip(
-        cluster_consonants + [(new_consonant, prev_left_consonant_node, last_right_consonant_node, last_right_consonant_f_node)],
-        cluster_consonant_nodes + [_clusters_trie.ROOT],
-    ):
-        new_cluster_node = _clusters_trie.get_dst_node(cluster_node, new_consonant)
+    new_cluster_consonants: list[tuple[Phoneme, ClusterOrigin, int]] = []
+    for consonant, origin, node in cluster_consonants + [(new_consonant, new_origin, _clusters_trie.ROOT)]:
+        new_cluster_node = _clusters_trie.get_dst_node(node, new_consonant)
         if new_cluster_node is None: continue
 
-        new_cluster_consonants.append(consonant_and_positions)
-        new_cluster_consonant_nodes.append(new_cluster_node)
+        new_cluster_consonants.append((consonant, origin, new_cluster_node))
 
-    return new_cluster_consonants, new_cluster_consonant_nodes
+    return new_cluster_consonants
 
 def _if_cluster_found(
-    cluster_consonants: list[tuple[Phoneme, Optional[int], Optional[int], Optional[int]]],
-    cluster_consonant_nodes: list[int],
+    cluster_consonants: list[tuple[Phoneme, ClusterOrigin, int]],
 ):
-    def handler(fn: Callable[[tuple[Phoneme, Optional[int], Optional[int], Optional[int]], Stroke], None]):
-        for consonant_and_positions, cluster_node in zip(cluster_consonants, cluster_consonant_nodes):
+    def handler(fn: Callable[[Phoneme, ClusterOrigin, Stroke], None]):
+        for consonant, origin, cluster_node in cluster_consonants:
             found_cluster = _clusters_trie.get_translation(cluster_node)
             if found_cluster is None: continue
 
-            fn(consonant_and_positions, found_cluster)
+            fn(consonant, origin, found_cluster)
 
     return handler
 
@@ -211,8 +225,7 @@ def _add_right_consonant(
     last_pre_rtl_stroke_boundary_node: Optional[int],
     is_first_consonant: bool,
     is_last_consonant: bool,
-    cluster_consonants: list[tuple[Phoneme, Optional[int], Optional[int], Optional[int]]],
-    cluster_consonant_nodes: list[int],
+    cluster_consonants: list[tuple[Phoneme, ClusterOrigin, int]],
 ):
     if next_right_consonant_src_node is None or consonant not in PHONEMES_TO_CHORDS_RIGHT:
         return None, None, None
@@ -261,15 +274,19 @@ def _add_right_consonant(
             _allow_elide_previous_vowel_using_first_right_consonant(trie, right_f_stroke, right_consonant_f_node, last_pre_rtl_stroke_boundary_node)
 
 
-    @_if_cluster_found(cluster_consonants, cluster_consonant_nodes)
-    def add_cluster(consonant_and_positions: tuple[Phoneme, Optional[int], Optional[int], Optional[int]], cluster_stroke: Stroke):
+    @_if_cluster_found(cluster_consonants)
+    def add_cluster(consonant: Phoneme, origin: ClusterOrigin, cluster_stroke: Stroke):
         cluster_right = cluster_stroke & RIGHT_BANK_CONSONANTS_SUBSTROKE
-        if len(cluster_right) > 0 and consonant_and_positions[2] is not None:
-            trie.link_chain(consonant_and_positions[2], right_consonant_node, cluster_stroke.keys())
-        if len(cluster_right) > 0 and consonant_and_positions[3] is not None and right_consonant_f_node is not None:
-            trie.link_chain(consonant_and_positions[3], right_consonant_f_node, cluster_stroke.keys())
+        if len(cluster_right) == 0: return
 
-    
+        if origin.right is not None:
+            trie.link_chain(origin.right, right_consonant_node, cluster_stroke.keys())
+        if origin.right_f is not None and right_consonant_f_node is not None:
+            trie.link_chain(origin.right_f, right_consonant_f_node, cluster_stroke.keys())
+
+        if is_first_consonant:
+            _allow_elide_previous_vowel_using_first_right_consonant(trie, cluster_stroke, right_consonant_node, origin.pre_rtl_stroke_boundary)
+
     rtl_stroke_boundary_adjacent_nodes = (pre_rtl_stroke_boundary_node, rtl_stroke_boundary_node)
     return right_consonant_node, right_consonant_f_node, rtl_stroke_boundary_adjacent_nodes if rtl_stroke_boundary_node is not None else None
 

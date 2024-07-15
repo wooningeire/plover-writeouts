@@ -139,6 +139,7 @@ CLUSTERS: dict[tuple[Phoneme, ...], Stroke] = {
         (Phoneme.M, Phoneme.J): "-PLG",
         (Phoneme.M, Phoneme.K): "*PLG",
         (Phoneme.R, Phoneme.F): "*FR",
+        (Phoneme.R, Phoneme.S): "*FR",
         (Phoneme.R, Phoneme.V): "-FRB",
         (Phoneme.R, Phoneme.CH): "-FRPB",
         (Phoneme.N, Phoneme.CH): "-FRPBLG",
@@ -146,6 +147,7 @@ CLUSTERS: dict[tuple[Phoneme, ...], Stroke] = {
         (Phoneme.L, Phoneme.SH): "*RB",
         (Phoneme.N, Phoneme.SH): "*RB",
         (Phoneme.M, Phoneme.P): "*PL",
+        (Phoneme.T, Phoneme.L): "-LT",
     }.items()
 }
 
