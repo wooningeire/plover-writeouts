@@ -152,6 +152,19 @@ CLUSTERS: dict[tuple[Phoneme, ...], Stroke] = {
 }
 
 
+DIPHTHONG_TRANSITIONS_BY_FIRST_VOWEL: dict[Stroke, Phoneme] = {
+    Stroke.from_steno(steno): phoneme
+    for steno, phoneme in {
+        "E": Phoneme.Y,
+        "OE": Phoneme.W,
+        "EU": Phoneme.Y,
+        "AOE": Phoneme.Y,
+        "AOU": Phoneme.W,
+        "AOEU": Phoneme.Y,
+    }.items()
+}
+
+
 TRIE_STROKE_BOUNDARY_KEY = ""
 TRIE_LINKER_KEY = "-"
 
