@@ -103,11 +103,10 @@ def _add_entry(trie: NondeterministicTrie[str, str], outline_steno: str, transla
 
         if len(vowels) > 0:
             vowels_src_node: Optional[int] = None
-            if len(current_syllable_consonants) == 0 and prev_vowel is not None:
-                if prev_vowel in DIPHTHONG_TRANSITIONS_BY_FIRST_VOWEL:
-                    current_syllable_consonants.append(DIPHTHONG_TRANSITIONS_BY_FIRST_VOWEL[prev_vowel])
-                else:
-                    vowels_src_node = trie.get_first_dst_node_else_create(next_left_consonant_src_node, TRIE_LINKER_KEY)
+            if len(current_syllable_consonants) == 0 and prev_vowel is not None and prev_vowel in DIPHTHONG_TRANSITIONS_BY_FIRST_VOWEL:
+                current_syllable_consonants.append(DIPHTHONG_TRANSITIONS_BY_FIRST_VOWEL[prev_vowel])
+            elif len(current_syllable_consonants) == 0 and prev_vowel is not None:
+                vowels_src_node = trie.get_first_dst_node_else_create(next_left_consonant_src_node, TRIE_LINKER_KEY)
 
             # plover.log.debug(current_syllable_consonants)
             for i, consonant in enumerate(current_syllable_consonants):
