@@ -165,6 +165,12 @@ DIPHTHONG_TRANSITIONS_BY_FIRST_VOWEL: dict[Stroke, Phoneme] = {
 }
 
 
+class TransitionCosts:
+    VOWEL_ELISION = 5
+    CLUSTER = 2
+    F_CONSONANT = 3
+
+
 TRIE_STROKE_BOUNDARY_KEY = ""
 TRIE_LINKER_KEY = "-"
 
