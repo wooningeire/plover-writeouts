@@ -13,7 +13,7 @@ class WriteoutsDictionary(StenoDictionary):
         super().__init__()
 
         """(override)"""
-        self._longest_key = 8
+        self._longest_key = 12
 
         self.__maybe_lookup: Optional[Callable[[tuple[str, ...]], Optional[str]]] = None
 

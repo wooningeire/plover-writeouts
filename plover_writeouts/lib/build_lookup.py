@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from plover.steno import Stroke
 import plover.log
 
-from .Trie import TransitionCostInfo, Trie, NondeterministicTrie
+from .Trie import Transition, TransitionCostInfo, Trie, NondeterministicTrie
 from .phoneme_util import split_consonant_phonemes
 from .config import (
     Phoneme,
@@ -16,6 +16,9 @@ from .config import (
     TRIE_LINKER_KEY,
     LINKER_CHORD,
     # INITIAL_VOWEL_CHORD,
+    VARIATION_CYCLER_STROKE,
+    # VARIATION_CYCLER_STROKE_BACKWARD,
+    PROHIBITED_STROKES,
     CLUSTERS,
     PHONEMES_TO_CHORDS_LEFT,
     PHONEMES_TO_CHORDS_RIGHT,
@@ -279,8 +282,8 @@ def _add_right_consonant(
         trie.link_chain(last_right_consonant_f_node, right_consonant_node, right_stroke_keys, TransitionCostInfo(TransitionCosts.VOWEL_ELISION if is_first_consonant else 0, translation))
 
     # Skeletals and right-bank consonant addons
-    # if prev_left_consonant_node is not None:
-    #     trie.link_chain(prev_left_consonant_node, right_consonant_node, right_stroke_keys, TransitionCosts.SKELETAL, translation)
+    if prev_left_consonant_node is not None:
+        trie.link_chain(prev_left_consonant_node, right_consonant_node, right_stroke_keys)
 
 
     pre_rtl_stroke_boundary_node = last_pre_rtl_stroke_boundary_node
@@ -342,8 +345,8 @@ def _add_right_f_consonant(
             TransitionCostInfo(TransitionCosts.F_CONSONANT + (TransitionCosts.VOWEL_ELISION if is_first_consonant else 0), translation)
         )
 
-    # if prev_left_consonant_node is not None:
-    #     trie.link_chain(prev_left_consonant_node, right_consonant_f_node, right_f_stroke_keys, TransitionCosts.SKELETAL, translation)
+    if prev_left_consonant_node is not None:
+        trie.link_chain(prev_left_consonant_node, right_consonant_f_node, right_f_stroke_keys)
         
     if is_first_consonant:
         _allow_elide_previous_vowel_using_first_right_consonant(
@@ -399,7 +402,7 @@ def _create_lookup_for(trie:  NondeterministicTrie[str, str]):
         current_nodes = {
             trie.ROOT: (),
         }
-        # n_variation = 0
+        n_variation = 0
 
         asterisk = Stroke.from_integer(0)
 
@@ -408,12 +411,18 @@ def _create_lookup_for(trie:  NondeterministicTrie[str, str]):
             if len(stroke) == 0:
                 return None
             
-            # if stroke == Stroke.from_steno("+"):
-            #     n_variation += 1
+            if stroke in PROHIBITED_STROKES:
+                return None
+            
+            if stroke == VARIATION_CYCLER_STROKE:
+                n_variation += 1
+                continue
+            # if stroke == VARIATION_CYCLER_STROKE_BACKWARD:
+            #     n_variation -= 1
             #     continue
 
-            # if n_variation > 0:
-            #     return None
+            if n_variation > 0:
+                return None
             
             if i > 0:
                 # plover.log.debug(current_nodes)
@@ -472,14 +481,19 @@ def _create_lookup_for(trie:  NondeterministicTrie[str, str]):
 
         first_choice = translation_choices[0]
         if len(asterisk) == 0:
-            return first_choice[0]
+            return _nth_variation(translation_choices, n_variation)
         else:
             for transition in reversed(first_choice[1][1]):
                 if trie.transition_has_key(transition, TRIE_STROKE_BOUNDARY_KEY): break
                 if not trie.transition_has_key(transition, ASTERISK_SUBSTROKE.rtfcre): continue
 
-                return first_choice[0]
+                return _nth_variation(translation_choices, n_variation)
 
-        return translation_choices[1][0] if len(translation_choices) > 1 else None
+        return _nth_variation(translation_choices, n_variation + 1) if len(translation_choices) > 1 else None
 
     return lookup
+
+def _nth_variation(choices: list[tuple[str, tuple[float, tuple[Transition, ...]]]], n_variation: int):
+    # index = n_variation % (len(choices) + 1)
+    # return choices[index][0] if index != len(choices) else None
+    return choices[n_variation % len(choices)][0]
