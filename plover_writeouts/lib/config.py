@@ -118,7 +118,7 @@ PHONEMES_TO_CHORDS_RIGHT_F: dict[Phoneme, Stroke] = {
 
 LINKER_CHORD = Stroke.from_steno("SWH")
 assert not (LINKER_CHORD & ~LEFT_BANK_CONSONANTS_SUBSTROKE), "Linker chord must only consist of starter keys"
-# INITIAL_VOWEL_CHORD: Optional[Stroke] = Stroke.from_steno("@")
+INITIAL_VOWEL_CHORD: Optional[Stroke] = Stroke.from_steno("@")
 
 VARIATION_CYCLER_STROKE = Stroke.from_steno("+")
 # VARIATION_CYCLER_STROKE_BACKWARD = Stroke.from_steno("+*")
@@ -132,8 +132,11 @@ CLUSTERS: dict[tuple[Phoneme, ...], Stroke] = {
     phonemes: Stroke.from_steno(steno)
     for phonemes, steno in {
         (Phoneme.D, Phoneme.S): "STK",
+        (Phoneme.D, Phoneme.S, Phoneme.T): "STK",
         (Phoneme.D, Phoneme.S, Phoneme.K): "STK",
         (Phoneme.K, Phoneme.N): "K",
+        (Phoneme.K, Phoneme.M, Phoneme.P): "KP",
+        (Phoneme.K, Phoneme.M, Phoneme.B): "KPW",
         (Phoneme.V,): "W",
         (Phoneme.L, Phoneme.F): "-FL",
         (Phoneme.L, Phoneme.V): "-FL",

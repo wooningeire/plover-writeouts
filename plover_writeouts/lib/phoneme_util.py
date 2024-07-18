@@ -34,8 +34,6 @@ _consonants_trie = _build_consonants_trie()
 
 
 def split_consonant_phonemes(consonants_stroke: Stroke):
-    entries_found: list[Phoneme] = []
-
     keys = consonants_stroke.keys()
     
     chord_start_index = 0
@@ -60,8 +58,6 @@ def split_consonant_phonemes(consonants_stroke: Stroke):
             entry = new_entry
             longest_chord_end_index = seek_index
 
-        entries_found.extend(entry)
+        yield from entry
 
         chord_start_index = longest_chord_end_index + 1
-
-    return tuple(entries_found)
