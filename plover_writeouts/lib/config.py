@@ -105,7 +105,14 @@ PHONEMES_TO_CHORDS_RIGHT: dict[Phoneme, Stroke] = {
     # "-FRB": (Phoneme.R, Phoneme.V),
 }
 
-PHONEMES_TO_CHORDS_RIGHT_F: dict[Phoneme, Stroke] = {
+PHONEMES_TO_CHORDS_LEFT_ALT: dict[Phoneme, Stroke] = {
+    phoneme: Stroke.from_steno(steno)
+    for phoneme, steno in {
+        Phoneme.V: "W",
+    }.items()
+}
+
+PHONEMES_TO_CHORDS_RIGHT_ALT: dict[Phoneme, Stroke] = {
     phoneme: Stroke.from_steno(steno)
     for phoneme, steno in {
         Phoneme.S: "-F",
@@ -137,7 +144,6 @@ CLUSTERS: dict[tuple[Phoneme, ...], Stroke] = {
         (Phoneme.K, Phoneme.N): "K",
         (Phoneme.K, Phoneme.M, Phoneme.P): "KP",
         (Phoneme.K, Phoneme.M, Phoneme.B): "KPW",
-        (Phoneme.V,): "W",
         (Phoneme.L, Phoneme.F): "-FL",
         (Phoneme.L, Phoneme.V): "-FL",
         (Phoneme.G, Phoneme.L): "-LG",
@@ -151,10 +157,11 @@ CLUSTERS: dict[tuple[Phoneme, ...], Stroke] = {
         (Phoneme.R, Phoneme.F): "*FR",
         (Phoneme.R, Phoneme.S): "*FR",
         (Phoneme.R, Phoneme.V): "-FRB",
+        (Phoneme.L, Phoneme.CH): "-LG",
         (Phoneme.R, Phoneme.CH): "-FRPB",
         (Phoneme.N, Phoneme.CH): "-FRPBLG",
-        (Phoneme.R, Phoneme.SH): "*RB",
         (Phoneme.L, Phoneme.SH): "*RB",
+        (Phoneme.R, Phoneme.SH): "*RB",
         (Phoneme.N, Phoneme.SH): "*RB",
         (Phoneme.M, Phoneme.P): "*PL",
         (Phoneme.T, Phoneme.L): "-LT",
@@ -179,7 +186,7 @@ DIPHTHONG_TRANSITIONS_BY_FIRST_VOWEL: dict[Stroke, Phoneme] = {
 class TransitionCosts:
     VOWEL_ELISION = 5
     CLUSTER = 2
-    F_CONSONANT = 3
+    ALT_CONSONANT = 3
 
 
 TRIE_STROKE_BOUNDARY_KEY = ""
