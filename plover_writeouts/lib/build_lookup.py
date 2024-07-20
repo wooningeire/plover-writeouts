@@ -513,7 +513,11 @@ def _add_right_consonant(
         trie.link_chain(last_right_alt_consonant_node, right_consonant_node, right_stroke_keys, TransitionCostInfo(TransitionCosts.VOWEL_ELISION if is_first_consonant else 0, translation))
 
     # Skeletals and right-bank consonant addons
-    if prev_left_consonant_node is not None:
+    can_use_main_prev = (
+        prev_consonant is None
+        or prev_consonant in PHONEMES_TO_CHORDS_RIGHT and can_add_stroke_on(PHONEMES_TO_CHORDS_RIGHT[prev_consonant], right_stroke)
+    )
+    if prev_left_consonant_node is not None and not can_use_main_prev:
         trie.link_chain(prev_left_consonant_node, right_consonant_node, right_stroke_keys)
 
 
@@ -560,12 +564,10 @@ def _add_right_alt_consonant(
     can_use_main_prev = (
         prev_consonant is None
         or prev_consonant in PHONEMES_TO_CHORDS_RIGHT and can_add_stroke_on(PHONEMES_TO_CHORDS_RIGHT[prev_consonant], right_stroke)
-        or prev_consonant in PHONEMES_TO_CHORDS_RIGHT_ALT and can_add_stroke_on(PHONEMES_TO_CHORDS_RIGHT_ALT[prev_consonant], right_stroke)
     )
     can_use_main_next = (
         next_consonant is None
         or next_consonant in PHONEMES_TO_CHORDS_RIGHT and can_add_stroke_on(right_stroke, PHONEMES_TO_CHORDS_RIGHT[next_consonant])
-        or next_consonant in PHONEMES_TO_CHORDS_RIGHT_ALT and can_add_stroke_on(right_stroke, PHONEMES_TO_CHORDS_RIGHT_ALT[next_consonant])
     )
     if can_use_main_prev and can_use_main_next:
         return None
@@ -581,7 +583,7 @@ def _add_right_alt_consonant(
             TransitionCostInfo(TransitionCosts.ALT_CONSONANT + (TransitionCosts.VOWEL_ELISION if is_first_consonant else 0), translation)
         )
 
-    if prev_left_consonant_node is not None:
+    if prev_left_consonant_node is not None and not can_use_main_prev:
         trie.link_chain(prev_left_consonant_node, right_alt_consonant_node, right_alt_stroke_keys)
         
     if is_first_consonant:
