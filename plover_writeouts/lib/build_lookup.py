@@ -225,8 +225,6 @@ def _add_entry(trie: NondeterministicTrie[str, str], phonemes: OutlinePhonemes, 
         is_first_consonant_set = group_index == 0
 
         vowels_src_node: Optional[int] = None
-        can_use_main_left_prev = False
-        can_use_main_left_next = False
         if len(consonants) == 0 and not is_first_consonant_set:
             vowels_src_node = trie.get_first_dst_node_else_create(next_left_consonant_src_node, TRIE_LINKER_KEY)
 
@@ -236,13 +234,9 @@ def _add_entry(trie: NondeterministicTrie[str, str], phonemes: OutlinePhonemes, 
             n_previous_syllable_consonants = len(phonemes.get_consonants(group_index - 1)) if group_index > 0 else 0
 
 
-            left_consonant_node = _add_left_consonant(
-                trie, consonant, next_left_consonant_src_node, prev_left_alt_consonant_node, last_rtl_stroke_boundary_node, last_prevowel_node, is_first_consonant,
-                is_first_consonant_set, n_previous_syllable_consonants, translation,
-            )
-            left_alt_consonant_node, can_use_main_left_prev, can_use_main_left_next = _add_left_alt_consonant(
+            left_consonant_node, left_alt_consonant_node = _add_left_consonant(
                 trie, consonant, prev_consonant, next_consonant,
-                left_consonant_node, next_left_consonant_src_node, prev_left_alt_consonant_node, last_rtl_stroke_boundary_node, last_prevowel_node, is_first_consonant,
+                next_left_consonant_src_node, prev_left_alt_consonant_node, last_rtl_stroke_boundary_node, last_prevowel_node, is_first_consonant,
                 is_first_consonant_set, n_previous_syllable_consonants, translation,
             )
 
@@ -252,7 +246,7 @@ def _add_entry(trie: NondeterministicTrie[str, str], phonemes: OutlinePhonemes, 
 
             if not is_first_consonant_set:
                 right_consonant_node, right_alt_consonant_node, rtl_stroke_boundary_adjacent_nodes = _add_right_consonant(
-                    trie, consonant, next_consonant,
+                    trie, consonant, prev_consonant, next_consonant,
                     next_right_consonant_src_node, last_right_alt_consonant_node, left_consonant_node, prev_left_consonant_node,
                     last_pre_rtl_stroke_boundary_node, phoneme_index == 0, translation,
                 )
@@ -297,7 +291,7 @@ def _add_entry(trie: NondeterministicTrie[str, str], phonemes: OutlinePhonemes, 
     group_index = len(phonemes.nonfinals)
     for phoneme_index, consonant in enumerate(phonemes.final_consonants):
         right_consonant_node, right_alt_consonant_node, _ = _add_right_consonant(
-            trie, consonant, phonemes.get_consonant_after(group_index, phoneme_index),
+            trie, consonant, prev_consonant, phonemes.get_consonant_after(group_index, phoneme_index),
             next_right_consonant_src_node, last_right_alt_consonant_node, None, prev_left_consonant_node,
             last_pre_rtl_stroke_boundary_node, phoneme_index == 0, translation,
         )
@@ -317,6 +311,8 @@ def _add_entry(trie: NondeterministicTrie[str, str], phonemes: OutlinePhonemes, 
         last_right_alt_consonant_node = right_alt_consonant_node
 
         next_left_consonant_src_node = None
+
+        prev_consonant = consonant
 
     if next_right_consonant_src_node is None:
         return
@@ -397,6 +393,8 @@ def _find_clusters(
 def _add_left_consonant(
     trie: NondeterministicTrie[str, str],
     consonant: Phoneme,
+    prev_consonant: Optional[Phoneme],
+    next_consonant: Optional[Phoneme],
     next_left_consonant_src_node: int,
     prev_left_alt_consonant_node: Optional[int],
     last_rtl_stroke_boundary_node: Optional[int],
@@ -423,8 +421,14 @@ def _add_left_consonant(
         _allow_elide_previous_vowel_using_first_left_consonant(
             trie, left_stroke, left_consonant_node, last_prevowel_node, last_rtl_stroke_boundary_node, translation,
         )
+        
+    left_alt_consonant_node = _add_left_alt_consonant(
+        trie, consonant, prev_consonant, next_consonant,
+        left_consonant_node, next_left_consonant_src_node, prev_left_alt_consonant_node, last_rtl_stroke_boundary_node, last_prevowel_node, is_first_consonant,
+        is_first_consonant_set, n_previous_syllable_consonants, translation,
+    )
 
-    return left_consonant_node
+    return left_consonant_node, left_alt_consonant_node
 
 def _add_left_alt_consonant(
     trie: NondeterministicTrie[str, str],
@@ -442,7 +446,7 @@ def _add_left_alt_consonant(
     translation: str,
 ):
     if consonant not in PHONEMES_TO_CHORDS_LEFT_ALT:
-        return None, False, False
+        return None
     
     left_alt_stroke = PHONEMES_TO_CHORDS_LEFT_ALT[consonant]
     left_stroke = PHONEMES_TO_CHORDS_LEFT[consonant]
@@ -458,7 +462,7 @@ def _add_left_alt_consonant(
         or next_consonant in PHONEMES_TO_CHORDS_LEFT_ALT and can_add_stroke_on(left_stroke, PHONEMES_TO_CHORDS_LEFT_ALT[next_consonant])
     )
     if can_use_main_prev and can_use_main_next:
-        return None, False, False
+        return None
 
 
     left_alt_stroke_keys = left_alt_stroke.keys()
@@ -473,17 +477,21 @@ def _add_left_alt_consonant(
             TransitionCostInfo(TransitionCosts.ALT_CONSONANT + (TransitionCosts.VOWEL_ELISION if is_first_consonant else 0), translation)
         )
 
-    if not is_first_consonant_set and is_first_consonant and n_previous_syllable_consonants > 0 and not can_use_main_prev:
+    if not is_first_consonant_set and is_first_consonant and n_previous_syllable_consonants > 0:
         # uses original left consonant node because it is ok to continue onto the vowel if the previous consonant is present
         _allow_elide_previous_vowel_using_first_left_consonant(
-            trie, left_alt_stroke, left_consonant_node, last_prevowel_node, last_rtl_stroke_boundary_node, translation, TransitionCosts.ALT_CONSONANT,
+            trie, left_alt_stroke, left_consonant_node, last_prevowel_node, None, translation, TransitionCosts.ALT_CONSONANT,
+        )
+        _allow_elide_previous_vowel_using_first_left_consonant(
+            trie, left_alt_stroke, left_alt_consonant_node, last_prevowel_node, last_rtl_stroke_boundary_node, translation, TransitionCosts.ALT_CONSONANT,
         )
 
-    return left_alt_consonant_node, can_use_main_prev, can_use_main_next
+    return left_alt_consonant_node
 
 def _add_right_consonant(
     trie: NondeterministicTrie[str, str],
     consonant: Phoneme,
+    prev_consonant: Optional[Phoneme],
     next_consonant: Optional[Phoneme],
     next_right_consonant_src_node: Optional[int],
     last_right_alt_consonant_node: Optional[int],
@@ -523,7 +531,7 @@ def _add_right_consonant(
 
 
     right_consonant_f_node = _add_right_alt_consonant(
-        trie, consonant, next_consonant, next_right_consonant_src_node, last_right_alt_consonant_node, prev_left_consonant_node,
+        trie, consonant, prev_consonant, next_consonant, right_consonant_node, next_right_consonant_src_node, last_right_alt_consonant_node, prev_left_consonant_node,
         last_pre_rtl_stroke_boundary_node, is_first_consonant, translation
     )
 
@@ -533,7 +541,9 @@ def _add_right_consonant(
 def _add_right_alt_consonant(
     trie: NondeterministicTrie[str, str],
     consonant: Phoneme,
+    prev_consonant: Optional[Phoneme],
     next_consonant: Optional[Phoneme],
+    right_consonant_node: int,
     next_right_consonant_src_node: int,
     last_right_alt_consonant_node: Optional[int],
     prev_left_consonant_node: Optional[int],
@@ -546,11 +556,18 @@ def _add_right_alt_consonant(
     
     right_alt_stroke = PHONEMES_TO_CHORDS_RIGHT_ALT[consonant]
     right_stroke = PHONEMES_TO_CHORDS_RIGHT[consonant]
-    if (
+
+    can_use_main_prev = (
+        prev_consonant is None
+        or prev_consonant in PHONEMES_TO_CHORDS_RIGHT and can_add_stroke_on(PHONEMES_TO_CHORDS_RIGHT[prev_consonant], right_stroke)
+        or prev_consonant in PHONEMES_TO_CHORDS_RIGHT_ALT and can_add_stroke_on(PHONEMES_TO_CHORDS_RIGHT_ALT[prev_consonant], right_stroke)
+    )
+    can_use_main_next = (
         next_consonant is None
         or next_consonant in PHONEMES_TO_CHORDS_RIGHT and can_add_stroke_on(right_stroke, PHONEMES_TO_CHORDS_RIGHT[next_consonant])
         or next_consonant in PHONEMES_TO_CHORDS_RIGHT_ALT and can_add_stroke_on(right_stroke, PHONEMES_TO_CHORDS_RIGHT_ALT[next_consonant])
-    ):
+    )
+    if can_use_main_prev and can_use_main_next:
         return None
 
 
@@ -569,7 +586,7 @@ def _add_right_alt_consonant(
         
     if is_first_consonant:
         _allow_elide_previous_vowel_using_first_right_consonant(
-            trie, right_alt_stroke, right_alt_consonant_node, last_pre_rtl_stroke_boundary_node, translation, TransitionCosts.ALT_CONSONANT,
+            trie, right_alt_stroke, right_consonant_node, last_pre_rtl_stroke_boundary_node, translation, TransitionCosts.ALT_CONSONANT,
         )
 
     return right_alt_consonant_node

@@ -29,6 +29,8 @@ class Phoneme(Enum):
     SH = auto()
     TH = auto()
 
+    ANY_VOWEL = auto()
+
     EU = auto()
     AOE = auto()
     
@@ -120,6 +122,7 @@ PHONEMES_TO_CHORDS_RIGHT_ALT: dict[Phoneme, Stroke] = {
         Phoneme.V: "-F",
         Phoneme.TH: "-F",
         Phoneme.M: "-FR",
+        Phoneme.K: "*G",
     }.items()
 }
 
@@ -148,12 +151,9 @@ CLUSTERS: dict[tuple[Phoneme, ...], Stroke] = {
         (Phoneme.L, Phoneme.V): "-FL",
         (Phoneme.G, Phoneme.L): "-LG",
         (Phoneme.L, Phoneme.J): "-LG",
-        (Phoneme.L, Phoneme.K): "*LG",
         (Phoneme.K, Phoneme.L): "*LG",
         (Phoneme.N, Phoneme.J): "-PBG",
-        (Phoneme.N, Phoneme.K): "*PBG",
         (Phoneme.M, Phoneme.J): "-PLG",
-        (Phoneme.M, Phoneme.K): "*PLG",
         (Phoneme.R, Phoneme.F): "*FR",
         (Phoneme.R, Phoneme.S): "*FR",
         (Phoneme.R, Phoneme.V): "-FRB",
