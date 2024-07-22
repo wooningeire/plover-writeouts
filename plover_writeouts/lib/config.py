@@ -169,15 +169,38 @@ CLUSTERS: dict[tuple[Phoneme, ...], Stroke] = {
     }.items()
 }
 
+VOWEL_CONSCIOUS_CLUSTERS: "dict[tuple[Phoneme | Stroke, ...], Stroke]" = {
+    tuple(
+        Stroke.from_steno(phoneme) if isinstance(phoneme, str) else phoneme
+        for phoneme in phonemes
+    ): Stroke.from_steno(steno)
+    for phonemes, steno in {
+        (Phoneme.ANY_VOWEL, Phoneme.N, Phoneme.T): "SPW",
+        (Phoneme.ANY_VOWEL, Phoneme.N, Phoneme.D): "SPW",
+        (Phoneme.ANY_VOWEL, Phoneme.M, Phoneme.P): "KPW",
+        (Phoneme.ANY_VOWEL, Phoneme.M, Phoneme.B): "KPW",
+        (Phoneme.ANY_VOWEL, Phoneme.N, Phoneme.K): "SKPW",
+        (Phoneme.ANY_VOWEL, Phoneme.N, Phoneme.G): "SKPW",
+        (Phoneme.ANY_VOWEL, Phoneme.N, Phoneme.J): "SKPW",
+        ("E", Phoneme.K, Phoneme.S): "SKW",
+        ("E", Phoneme.K, Phoneme.S, Phoneme.T): "STKW",
+        ("E", Phoneme.K, Phoneme.S, Phoneme.K): "SKW",
+        ("E", Phoneme.K, Phoneme.S, Phoneme.P): "SKPW",
+    }.items()
+}
+
 
 DIPHTHONG_TRANSITIONS_BY_FIRST_VOWEL: dict[Stroke, Phoneme] = {
     Stroke.from_steno(steno): phoneme
     for steno, phoneme in {
         "E": Phoneme.Y,
         "OE": Phoneme.W,
+        "OU": Phoneme.W,
         "EU": Phoneme.Y,
         "AOE": Phoneme.Y,
         "AOU": Phoneme.W,
+        "AEU": Phoneme.Y,
+        "OEU": Phoneme.Y,
         "AOEU": Phoneme.Y,
     }.items()
 }
