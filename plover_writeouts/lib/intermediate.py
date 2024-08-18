@@ -25,6 +25,9 @@ class _AnnotatedKey:
             )
             for key in stroke.keys() 
         )
+    
+    def __str__(self):
+        return f"{self.key}{'(*)' if self.asterisk else ''}"
 
 _GRAPHEME_TO_STENO_MAPPINGS = {
     grapheme: sorted(
@@ -56,7 +59,7 @@ _GRAPHEME_TO_STENO_MAPPINGS = {
         "r": ("R", "-R"),
         "s": ("S", "-S", "-F", "-Z"),
         "t": ("T", "-T"),
-        "u": ("U", "AOU", "U/W", "AOU/W"),
+        "u": ("U", "AOU", "U/W", "AOU/W", "KWRU", "KWRAOU", "KWRU/W", "KWRAOU/W"),
         "v": ("SR", "-F"),
         "w": ("W", "U"),
         "x": ("KP", "-BGS", "-BG/S"),
@@ -106,6 +109,7 @@ class _Cell:
     """The total number of unmatched characters in the translation using this cell's alignment."""
     n_unmatched_keys: int
     """The total number of unmatched characters in the translation using this cell's alignment."""
+    n_lexemes: int
 
     unmatched_char_start_index: int
     """The index where the sequence of trailing unmatched characters for this alignment beigins. This specifies which characters to check when trying to find matches."""
@@ -123,7 +127,34 @@ class _Cell:
 
     @property
     def cost(self):
-        return self.n_unmatched_chars + self.n_unmatched_keys * 0.5
+        return (self.n_unmatched_keys, self.n_unmatched_chars, self.n_lexemes)
+
+    def __lt__(self, cell: "_Cell"):
+        return self.cost < cell.cost
+    
+    def __gt__(self, cell: "_Cell"):
+        return self.cost > cell.cost
+    
+    def lexemes_reversed(self, translation: str, annotated_keys: tuple[_AnnotatedKey, ...], matrix: list[list["_Cell"]]):
+        if self.parent is None: return
+
+        if self.has_match:
+            start_cell = self.parent
+            asterisk_matches = self.asterisk_matches
+        else:
+            start_cell = matrix[self.parent.unmatched_char_start_index][self.parent.unmatched_key_start_index]
+            asterisk_matches = (False,) * (self.y - start_cell.y)
+
+        yield Lexeme(
+            ortho=translation[start_cell.x:self.x],
+            steno=Lexeme.keys_to_strokes((key.key for key in annotated_keys[start_cell.y:self.y]), asterisk_matches),
+            phono="",
+        )
+
+        yield from start_cell.lexemes_reversed(translation, annotated_keys, matrix)
+
+    def lexemes(self, translation: str, annotated_keys: tuple[_AnnotatedKey, ...], matrix: list[list["_Cell"]]):
+        return reversed(tuple(self.lexemes_reversed(translation, annotated_keys, matrix)))
     
 @dataclass(frozen=True)
 class Lexeme:
@@ -168,140 +199,105 @@ def match_graphemes_to_writeout_chords(translation: str, outline_steno: str):
 
     annotated_keys = _AnnotatedKey.annotations_from_outline(outline_steno)
 
+    def create_mismatch_cell(x: int, y: int, increment_x: bool, increment_y: bool):
+        mismatch_parent = matrix[x if increment_x else x + 1][y if increment_y else y + 1]
 
-    # Base row and column
+        return _Cell(
+            mismatch_parent.n_unmatched_chars + (1 if increment_x else 0),
+            mismatch_parent.n_unmatched_keys + (1 if increment_y else 0),
+            mismatch_parent.n_lexemes + 1 if mismatch_parent.has_match else mismatch_parent.n_lexemes,
+            mismatch_parent.unmatched_char_start_index,
+            mismatch_parent.unmatched_key_start_index,
+            mismatch_parent,
+            x + 1,
+            y + 1,
+            False,
+        )
 
-    matrix = [[_Cell(0, 0, 0, 0, None, 0, 0, False)]]
-
-    for i in range(len(translation)):
-        matrix.append([_Cell(i + 1, 0, 0, 0, matrix[-1][0], i + 1, 0, False)])
-
-    for i in range(len(annotated_keys)):
-        matrix[0].append(_Cell(0, i + 1, 0, 0, matrix[0][-1], 0, i + 1, False))
-
-
-    # Populating the matrix
-
-    # log = []
-    # l = lambda *x: log.append(" ".join(str(s) for s in x))
-        
-    def find_match(x: int, y: int):
+    def find_match(x: int, y: int, increment_x: bool, increment_y: bool):
         """Attempt to match any combination of the last m consecutive unmatched characters to the last n consecutive unmatched keys."""
-
-        base = matrix[x][y]
 
         candidate_chars = translation[:x + 1]
         candidate_keys = annotated_keys[:y + 1]
 
-        # l()
-        # l(unmatched_chars, unmatched_keys, x, y)
+        # print()
+        # print(unmatched_chars, unmatched_keys, x, y)
 
-        for i in reversed(range(1, len(candidate_chars) + 1)):
-            grapheme = candidate_chars[-i:]
-            # l("using grapheme", grapheme)
+        candidate_cells = [create_mismatch_cell(x, y, increment_x, increment_y)]
+
+        # For orthogonal movements in the matrix, only consider silent chords
+
+        for i in reversed(range((len(candidate_chars) if increment_x else 0) + 1)):
+            grapheme = candidate_chars[len(candidate_chars) - i:]
+            # print("using grapheme", grapheme)
             if grapheme not in _GRAPHEME_TO_STENO_MAPPINGS: continue
 
             for chord in _GRAPHEME_TO_STENO_MAPPINGS[grapheme]:
-                # l("testing chord", chord)
-                sub_candidate_keys = candidate_keys[-len(chord):]
+                # print("testing chord", chord)
+                sub_candidate_keys = candidate_keys[len(candidate_keys) - len(chord):]
                 if tuple(key.key for key in sub_candidate_keys) != tuple(key.key for key in chord): continue
 
                 if any(
                     chord_key.asterisk and not candidate_key.asterisk
                     for candidate_key, chord_key in zip(sub_candidate_keys, chord)
                 ): continue
+
+                parent = matrix[x + 1 - len(grapheme)][y + 1 - len(chord)]
                 
-                # l("found", grapheme, chord)
-                return _Cell(
-                    base.n_unmatched_chars + 1 - len(grapheme),
-                    base.n_unmatched_keys + 1 - len(chord),
-                    x + 1,
-                    y + 1,
-                    matrix[x + 1 - len(grapheme)][y + 1 - len(chord)],
-                    x + 1,
-                    y + 1,
-                    True,
-                    tuple(key.asterisk for key in chord),
+                # print("found", grapheme, chord)
+                candidate_cells.append(
+                    _Cell(
+                        parent.n_unmatched_chars,
+                        parent.n_unmatched_keys,
+                        parent.n_lexemes + 1,
+                        x + 1,
+                        y + 1,
+                        parent,
+                        x + 1,
+                        y + 1,
+                        True,
+                        tuple(key.asterisk for key in chord),
+                    )
                 )
 
-        # l("not found")
-        return _Cell(
-            base.n_unmatched_chars + 1,
-            base.n_unmatched_keys + 1,
-            base.unmatched_char_start_index,
-            base.unmatched_key_start_index,
-            base,
-            x + 1,
-            y + 1,
-            False,
-        )
-    
-    
+        return min(candidate_cells)
+
+
+    # Base row and column
+
+    matrix = [[_Cell(0, 0, 0, 0, 0, None, 0, 0, False)]]
+
+    for i in range(len(translation)):
+        matrix.append([_Cell(i + 1, 0, 1, 0, 0, matrix[-1][0], i + 1, 0, False)])
+
+    for i in range(len(annotated_keys)):
+        matrix[0].append(find_match(-1, i, False, True))
+
+
+    # Populating the matrix
+
     for x in range(len(translation)):
         for y in range(len(annotated_keys)):
             # Increment x: add a character from the translation
-            x_base = matrix[x][y + 1]
-            x_candidate = _Cell(
-                x_base.n_unmatched_chars + 1,
-                x_base.n_unmatched_keys,
-                x_base.unmatched_char_start_index,
-                x_base.unmatched_key_start_index,
-                x_base,
-                x + 1,
-                y + 1,
-                False,
-            )
+            x_candidate = create_mismatch_cell(x, y, True, False)
 
             # Increment y: add a key from the outline
-            y_base = matrix[x + 1][y]
-            y_candidate = _Cell(
-                y_base.n_unmatched_chars,
-                y_base.n_unmatched_keys + 1,
-                y_base.unmatched_char_start_index,
-                y_base.unmatched_key_start_index,
-                y_base,
-                x + 1,
-                y + 1,
-                False,
-            )
+            y_candidate = find_match(x, y, False, True)
 
             # Increment xy: both
-            xy_candidate = find_match(x, y)
+            xy_candidate = find_match(x, y, True, True)
 
 
-            matrix[x + 1].append(min(x_candidate, y_candidate, xy_candidate, key=lambda cell: cell.cost))
+            matrix[x + 1].append(min(x_candidate, y_candidate, xy_candidate))
 
 
-    # # Display the cost matrix
-    # l(f".	.	{'	'.join(keys)}")
+    # Display the cost matrix
+    # COL_WIDTH = 16
+    # print(f"{'.'.ljust(COL_WIDTH) * 2}{''.join(str(key).ljust(COL_WIDTH) for key in annotated_keys)}")
     # for r, ch in zip(matrix, f".{translation}"):
-    #     l(f"{ch}	{'	'.join(str(cell.cost) for cell in r)}")
-    
-    # l()
-    # l()
+    #     print(f"{ch.ljust(COL_WIDTH)}{''.join(str(cell.cost).ljust(COL_WIDTH) for cell in r)}")
 
-    # print("\n".join(log))
-    
 
     # Traceback
-    
-    lexemes: list[Lexeme] = []
 
-    current_cell = matrix[-1][-1]
-    while current_cell.parent is not None:
-        if current_cell.has_match:
-            start_cell = current_cell.parent
-            asterisk_matches = current_cell.asterisk_matches
-        else:
-            start_cell = matrix[current_cell.parent.unmatched_char_start_index][current_cell.parent.unmatched_key_start_index]
-            asterisk_matches = (False,) * (current_cell.y - start_cell.y)
-
-        lexemes.append(Lexeme(
-            ortho=translation[start_cell.x:current_cell.x],
-            steno=Lexeme.keys_to_strokes((key.key for key in annotated_keys[start_cell.y:current_cell.y]), asterisk_matches),
-            phono="",
-        ))
-
-        current_cell = start_cell
-
-    return tuple(reversed(lexemes))
+    return tuple(matrix[-1][-1].lexemes(translation, annotated_keys, matrix))
