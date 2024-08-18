@@ -8,7 +8,7 @@ import plover.log
 
 from .Trie import ReadonlyTrie, Transition, TransitionCostInfo, Trie, NondeterministicTrie
 from .phoneme_util import split_consonant_phonemes
-from .util import can_add_stroke_on
+from .util import can_add_stroke_on, split_stroke_parts
 from .config import (
     Phoneme,
     LEFT_BANK_CONSONANTS_SUBSTROKE,
@@ -32,15 +32,6 @@ from .config import (
     OPTIMIZE_TRIE_SPACE,
     TransitionCosts,
 )
-
-
-def _split_stroke_parts(stroke: Stroke):
-    left_bank_consonants = stroke & LEFT_BANK_CONSONANTS_SUBSTROKE
-    vowels = stroke & VOWELS_SUBSTROKE
-    right_bank_consonants = stroke & RIGHT_BANK_CONSONANTS_SUBSTROKE
-    asterisk = stroke & ASTERISK_SUBSTROKE
-
-    return left_bank_consonants, vowels, right_bank_consonants, asterisk
 
 
 def _build_clusters_trie():
@@ -219,7 +210,7 @@ def _get_outline_phonemes(outline: Iterable[Stroke]):
     current_group_consonants: list[Phoneme] = []
     
     for stroke in outline:
-        left_bank_consonants, vowels, right_bank_consonants, asterisk = _split_stroke_parts(stroke)
+        left_bank_consonants, vowels, right_bank_consonants, asterisk = split_stroke_parts(stroke)
         if len(asterisk) > 0:
             return None
 
@@ -664,7 +655,7 @@ def _create_lookup_for(trie:  NondeterministicTrie[str, str]):
                 if len(current_nodes) == 0:
                     return None
 
-            left_bank_consonants, vowels, right_bank_consonants, asterisk = _split_stroke_parts(stroke)
+            left_bank_consonants, vowels, right_bank_consonants, asterisk = split_stroke_parts(stroke)
 
             if len(left_bank_consonants) > 0:
                 # plover.log.debug(current_nodes)

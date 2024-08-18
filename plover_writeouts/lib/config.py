@@ -37,7 +37,7 @@ class Phoneme(Enum):
     DUMMY = auto()
 
 
-LEFT_BANK_CONSONANTS_SUBSTROKE = Stroke.from_steno("#@^+STKPWHR")
+LEFT_BANK_CONSONANTS_SUBSTROKE = Stroke.from_steno("#@^+&STKPWHR")
 VOWELS_SUBSTROKE = Stroke.from_steno("AOEU")
 RIGHT_BANK_CONSONANTS_SUBSTROKE = Stroke.from_steno("-FRPBLGTSDZ")
 ASTERISK_SUBSTROKE = Stroke.from_steno("*")
@@ -122,6 +122,7 @@ PHONEMES_TO_CHORDS_RIGHT_ALT: dict[Phoneme, Stroke] = {
         Phoneme.V: "-F",
         Phoneme.TH: "-F",
         Phoneme.M: "-FR",
+        Phoneme.J: "-FR",
         Phoneme.K: "*G",
     }.items()
 }
@@ -130,7 +131,7 @@ LINKER_CHORD = Stroke.from_steno("SWH")
 assert not (LINKER_CHORD & ~LEFT_BANK_CONSONANTS_SUBSTROKE), "Linker chord must only consist of starter keys"
 INITIAL_VOWEL_CHORD: Optional[Stroke] = Stroke.from_steno("@")
 
-VARIATION_CYCLER_STROKE = Stroke.from_steno("+")
+VARIATION_CYCLER_STROKE = Stroke.from_steno("+TPHEGT")
 # VARIATION_CYCLER_STROKE_BACKWARD = Stroke.from_steno("+*")
 
 PROHIBITED_STROKES = {
@@ -165,7 +166,6 @@ CLUSTERS: dict[tuple[Phoneme, ...], Stroke] = {
         (Phoneme.N, Phoneme.SH): "*RB",
         (Phoneme.M, Phoneme.P): "*PL",
         (Phoneme.T, Phoneme.L): "-LT",
-        (Phoneme.J, Phoneme.M): "-FPL",
     }.items()
 }
 
@@ -186,6 +186,9 @@ VOWEL_CONSCIOUS_CLUSTERS: "dict[tuple[Phoneme | Stroke, ...], Stroke]" = {
         ("E", Phoneme.K, Phoneme.S, Phoneme.T): "STKW",
         ("E", Phoneme.K, Phoneme.S, Phoneme.K): "SKW",
         ("E", Phoneme.K, Phoneme.S, Phoneme.P): "SKPW",
+        (Phoneme.ANY_VOWEL, Phoneme.N): "TPH",
+        (Phoneme.ANY_VOWEL, Phoneme.N, Phoneme.S): "STPH",
+        (Phoneme.ANY_VOWEL, Phoneme.M): "PH",
     }.items()
 }
 
