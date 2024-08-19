@@ -41,7 +41,7 @@ _GRAPHEME_TO_STENO_MAPPINGS = {
 
         "a": ("A", "AEU", "AU"),
         "b": ("PW", "-B"),
-        "c": ("S", "K", "KR", "-BG", "-S"),
+        "c": ("S", "K", "KR", "-BG", "-S", "SH", "-RB", "KH", "-FP"),
         "d": ("TK", "-D"),
         "e": ("E", "AOE", "AEU", "E/KWR", "AOE/KWR"),
         "f": ("TP", "-F"),
@@ -57,14 +57,14 @@ _GRAPHEME_TO_STENO_MAPPINGS = {
         "p": ("P", "-P"),
         "q": ("K", "-BG"),
         "r": ("R", "-R"),
-        "s": ("S", "-S", "-F", "-Z"),
-        "t": ("T", "-T"),
+        "s": ("S", "-S", "-F", "-Z", "SH", "-RB"),
+        "t": ("T", "-T", "SH", "-RB", "KH", "-FP"),
         "u": ("U", "AOU", "U/W", "AOU/W", "KWRU", "KWRAOU", "KWRU/W", "KWRAOU/W"),
         "v": ("SR", "-F"),
         "w": ("W", "U"),
         "x": ("KP", "-BGS", "-BG/S"),
         "y": ("KWH", "EU", "AOEU", "EU/KWR", "AOEU/KWR"),
-        "z": ("STKPW", "-Z"),
+        "z": ("STKPW", "-Z", "-F"),
 
         "th": ("TH", "*T"),
         "sh": ("SH", "-RB"),
@@ -92,11 +92,16 @@ _GRAPHEME_TO_STENO_MAPPINGS = {
         "nn": ("TPH", "-PB"),
         "pp": ("P", "-P"),
         "rr": ("R", "-R"),
-        "ss": ("S", "-S"),
+        "ss": ("S", "-S", "-F", "-Z", "SH", "-RB"),
         "tt": ("T", "-T"),
         "vv": ("SR", "-F"),
         "xx": ("KP", "-BGS", "-BG/S"),
-        "zz": ("STKPW", "-Z"),
+        "zz": ("STKPW", "-Z", "-F"),
+
+        "tion": ("-GS"),
+        "cian": ("-GS"),
+        "ction": ("-BGS"),
+        "nction": ("-PBGS"),
     }).items()
 }
 """A list of what counts as a "match" when matching characters to keys."""
@@ -109,7 +114,7 @@ class _Cell:
     """The total number of unmatched characters in the translation using this cell's alignment."""
     n_unmatched_keys: int
     """The total number of unmatched characters in the translation using this cell's alignment."""
-    n_lexemes: int
+    n_sophemes: int
 
     unmatched_char_start_index: int
     """The index where the sequence of trailing unmatched characters for this alignment beigins. This specifies which characters to check when trying to find matches."""
@@ -127,7 +132,7 @@ class _Cell:
 
     @property
     def cost(self):
-        return (self.n_unmatched_keys, self.n_unmatched_chars, self.n_lexemes)
+        return (self.n_unmatched_keys, self.n_unmatched_chars, self.n_sophemes)
 
     def __lt__(self, cell: "_Cell"):
         return self.cost < cell.cost
@@ -135,7 +140,7 @@ class _Cell:
     def __gt__(self, cell: "_Cell"):
         return self.cost > cell.cost
     
-    def lexemes_reversed(self, translation: str, annotated_keys: tuple[_AnnotatedKey, ...], matrix: list[list["_Cell"]]):
+    def sophemes_reversed(self, translation: str, annotated_keys: tuple[_AnnotatedKey, ...], matrix: list[list["_Cell"]]):
         if self.parent is None: return
 
         if self.has_match:
@@ -145,19 +150,19 @@ class _Cell:
             start_cell = matrix[self.parent.unmatched_char_start_index][self.parent.unmatched_key_start_index]
             asterisk_matches = (False,) * (self.y - start_cell.y)
 
-        yield Lexeme(
+        yield Sopheme(
             ortho=translation[start_cell.x:self.x],
-            steno=Lexeme.keys_to_strokes((key.key for key in annotated_keys[start_cell.y:self.y]), asterisk_matches),
+            steno=Sopheme.keys_to_strokes((key.key for key in annotated_keys[start_cell.y:self.y]), asterisk_matches),
             phono="",
         )
 
-        yield from start_cell.lexemes_reversed(translation, annotated_keys, matrix)
+        yield from start_cell.sophemes_reversed(translation, annotated_keys, matrix)
 
-    def lexemes(self, translation: str, annotated_keys: tuple[_AnnotatedKey, ...], matrix: list[list["_Cell"]]):
-        return reversed(tuple(self.lexemes_reversed(translation, annotated_keys, matrix)))
+    def sophemes(self, translation: str, annotated_keys: tuple[_AnnotatedKey, ...], matrix: list[list["_Cell"]]):
+        return reversed(tuple(self.sophemes_reversed(translation, annotated_keys, matrix)))
     
 @dataclass(frozen=True)
-class Lexeme:
+class Sopheme:
     ortho: str
     steno: tuple[Stroke, ...]
     phono: str
@@ -188,7 +193,7 @@ class Lexeme:
 
         return tuple(strokes)
 
-def match_graphemes_to_writeout_chords(translation: str, outline_steno: str):
+def match_chars_to_writeout_chords(translation: str, outline_steno: str):
     """Generates an alignment between characters in a translation and keys in a Lapwing-style outline.
     
     Uses a variation of the Needleman–Wunsch algorithm.
@@ -205,7 +210,7 @@ def match_graphemes_to_writeout_chords(translation: str, outline_steno: str):
         return _Cell(
             mismatch_parent.n_unmatched_chars + (1 if increment_x else 0),
             mismatch_parent.n_unmatched_keys + (1 if increment_y else 0),
-            mismatch_parent.n_lexemes + 1 if mismatch_parent.has_match else mismatch_parent.n_lexemes,
+            mismatch_parent.n_sophemes + 1 if mismatch_parent.has_match else mismatch_parent.n_sophemes,
             mismatch_parent.unmatched_char_start_index,
             mismatch_parent.unmatched_key_start_index,
             mismatch_parent,
@@ -225,7 +230,7 @@ def match_graphemes_to_writeout_chords(translation: str, outline_steno: str):
 
         candidate_cells = [create_mismatch_cell(x, y, increment_x, increment_y)]
 
-        # For orthogonal movements in the matrix, only consider silent chords
+        # When incrementing x, only consider silent chords
 
         for i in reversed(range((len(candidate_chars) if increment_x else 0) + 1)):
             grapheme = candidate_chars[len(candidate_chars) - i:]
@@ -249,7 +254,7 @@ def match_graphemes_to_writeout_chords(translation: str, outline_steno: str):
                     _Cell(
                         parent.n_unmatched_chars,
                         parent.n_unmatched_keys,
-                        parent.n_lexemes + 1,
+                        parent.n_sophemes + 1,
                         x + 1,
                         y + 1,
                         parent,
@@ -300,4 +305,4 @@ def match_graphemes_to_writeout_chords(translation: str, outline_steno: str):
 
     # Traceback
 
-    return tuple(matrix[-1][-1].lexemes(translation, annotated_keys, matrix))
+    return tuple(matrix[-1][-1].sophemes(translation, annotated_keys, matrix))

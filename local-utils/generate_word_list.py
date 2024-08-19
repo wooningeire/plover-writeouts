@@ -11,13 +11,20 @@ def _setup_plover():
     system.setup(DEFAULT_SYSTEM_NAME)
 
 def _main():
-    from plover_writeouts.lib.intermediate import match_graphemes_to_writeout_chords
+    from plover_writeouts.lib.intermediate import match_chars_to_writeout_chords
 
     with open(Path(__file__).parent.parent / "local-utils/data/lapwing-base.json", "r", encoding="utf-8") as file:
         lapwing_dict = json.load(file)
     
+    # lapwing_affixes_dict: dict[str, set[str]] = {}
     reverse_lapwing_dict: dict[str, list[str]] = {}
     for outline_steno, translation in lapwing_dict.items():
+        # if "{^" in translation or "^}" in translation:
+        #     if translation in reverse_lapwing_affixes_dict:
+        #         reverse_lapwing_affixes_dict[translation].add(outline_steno) 
+
+        #     continue
+
         if not translation.isalnum():
             continue
 
@@ -37,8 +44,7 @@ def _main():
         with open(out_path, "w+", encoding="utf-8") as file:
             for translation, outline_stenos in reverse_lapwing_dict.items():
                 for outline_steno in outline_stenos:
-                    file.write(" ".join(str(lexeme) for lexeme in match_graphemes_to_writeout_chords(translation, outline_steno)))
-                    file.write("\n")
+                    file.write(" ".join(str(sopheme) for sopheme in match_chars_to_writeout_chords(translation, outline_steno)) + "\n")
                     
     print(f"Generating entries…")
     duration = timeit.timeit(generate, number=1)
