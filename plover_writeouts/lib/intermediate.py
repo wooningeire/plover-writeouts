@@ -4,6 +4,7 @@ from typing import Iterable, cast
 from plover.steno import Stroke
 
 from .util import can_add_stroke_on
+from .Phoneme import Phoneme
 
 _ASTERISK_SUBSTROKE = Stroke.from_steno("*")
     
@@ -98,10 +99,10 @@ _GRAPHEME_TO_STENO_MAPPINGS = {
         "xx": ("KP", "-BGS", "-BG/S"),
         "zz": ("STKPW", "-Z", "-F"),
 
-        "tion": ("-GS"),
-        "cian": ("-GS"),
-        "ction": ("-BGS"),
-        "nction": ("-PBGS"),
+        "tion": ("-GS",),
+        "cian": ("-GS",),
+        "ction": ("-BGS",),
+        "nction": ("-PBGS",),
     }).items()
 }
 """A list of what counts as a "match" when matching characters to keys."""
