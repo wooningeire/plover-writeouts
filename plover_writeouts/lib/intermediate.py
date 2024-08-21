@@ -1,13 +1,12 @@
 from dataclasses import dataclass
-from typing import Iterable, cast
+from typing import cast
 
 from plover.steno import Stroke
 
-from .util import can_add_stroke_on
-from .Phoneme import Phoneme
+from .Sopheme import Sopheme, SophemeSeq
+from .config import ASTERISK_SUBSTROKE
 
-_ASTERISK_SUBSTROKE = Stroke.from_steno("*")
-    
+
 @dataclass(frozen=True)
 class _AnnotatedKey:
     key: str
@@ -18,7 +17,7 @@ class _AnnotatedKey:
         return tuple(
             _AnnotatedKey(key, has_asterisk)
             for stroke, has_asterisk in (
-                (stroke - _ASTERISK_SUBSTROKE, _ASTERISK_SUBSTROKE in stroke)
+                (stroke - ASTERISK_SUBSTROKE, ASTERISK_SUBSTROKE in stroke)
                 for stroke in (
                     Stroke.from_steno(steno)
                     for steno in outline_steno.split("/")
@@ -141,58 +140,6 @@ class _Cell:
     def __gt__(self, cell: "_Cell"):
         return self.cost > cell.cost
     
-    def sophemes_reversed(self, translation: str, annotated_keys: tuple[_AnnotatedKey, ...], matrix: list[list["_Cell"]]):
-        if self.parent is None: return
-
-        if self.has_match:
-            start_cell = self.parent
-            asterisk_matches = self.asterisk_matches
-        else:
-            start_cell = matrix[self.parent.unmatched_char_start_index][self.parent.unmatched_key_start_index]
-            asterisk_matches = (False,) * (self.y - start_cell.y)
-
-        yield Sopheme(
-            ortho=translation[start_cell.x:self.x],
-            steno=Sopheme.keys_to_strokes((key.key for key in annotated_keys[start_cell.y:self.y]), asterisk_matches),
-            phono="",
-        )
-
-        yield from start_cell.sophemes_reversed(translation, annotated_keys, matrix)
-
-    def sophemes(self, translation: str, annotated_keys: tuple[_AnnotatedKey, ...], matrix: list[list["_Cell"]]):
-        return reversed(tuple(self.sophemes_reversed(translation, annotated_keys, matrix)))
-    
-@dataclass(frozen=True)
-class Sopheme:
-    ortho: str
-    steno: tuple[Stroke, ...]
-    phono: str
-
-    def __str__(self):
-        return f"{self.ortho}.{'/'.join(stroke.rtfcre for stroke in self.steno)}"
-    
-    __repr__ = __str__
-
-    @staticmethod
-    def keys_to_strokes(keys: Iterable[str], asterisk_matches: Iterable[bool]):
-        strokes: list[Stroke] = []
-
-        current_stroke = Stroke.from_integer(0)
-        for key, asterisk_match in zip(keys, asterisk_matches):
-            key_stroke = Stroke.from_keys((key,))
-            if asterisk_match:
-                key_stroke += _ASTERISK_SUBSTROKE
-
-            if can_add_stroke_on(current_stroke, key_stroke):
-                current_stroke += key_stroke
-            else:
-                strokes.append(current_stroke)
-                current_stroke = key_stroke
-
-        if len(current_stroke) > 0:
-            strokes.append(current_stroke)
-
-        return tuple(strokes)
 
 def match_chars_to_writeout_chords(translation: str, outline_steno: str):
     """Generates an alignment between characters in a translation and keys in a Lapwing-style outline.
@@ -274,7 +221,7 @@ def match_chars_to_writeout_chords(translation: str, outline_steno: str):
     matrix = [[_Cell(0, 0, 0, 0, 0, None, 0, 0, False)]]
 
     for i in range(len(translation)):
-        matrix.append([_Cell(i + 1, 0, 1, 0, 0, matrix[-1][0], i + 1, 0, False)])
+        matrix.append([create_mismatch_cell(i, -1, True, False)])
 
     for i in range(len(annotated_keys)):
         matrix[0].append(find_match(-1, i, False, True))
@@ -306,4 +253,22 @@ def match_chars_to_writeout_chords(translation: str, outline_steno: str):
 
     # Traceback
 
-    return tuple(matrix[-1][-1].sophemes(translation, annotated_keys, matrix))
+    def traceback_sophemes(cell: _Cell):
+        if cell.parent is None: return
+
+        if cell.has_match:
+            start_cell = cell.parent
+            asterisk_matches = cell.asterisk_matches
+        else:
+            start_cell = matrix[cell.parent.unmatched_char_start_index][cell.parent.unmatched_key_start_index]
+            asterisk_matches = (False,) * (cell.y - start_cell.y)
+
+        yield from traceback_sophemes(start_cell)
+
+        yield Sopheme(
+            ortho=translation[start_cell.x:cell.x],
+            steno=Sopheme.keys_to_strokes((key.key for key in annotated_keys[start_cell.y:cell.y]), asterisk_matches),
+            phono="",
+        )
+
+    return SophemeSeq.of(traceback_sophemes(matrix[-1][-1]))

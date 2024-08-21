@@ -1,43 +1,11 @@
-from enum import Enum, auto
 from typing import Optional
 
 from plover.steno import Stroke
 
-
-class Phoneme(Enum):
-    S = auto()
-    T = auto()
-    K = auto()
-    P = auto()
-    W = auto()
-    H = auto()
-    R = auto()
-
-    Z = auto()
-    J = auto()
-    V = auto()
-    D = auto()
-    G = auto()
-    F = auto()
-    N = auto()
-    Y = auto()
-    B = auto()
-    M = auto()
-    L = auto()
-
-    CH = auto()
-    SH = auto()
-    TH = auto()
-
-    ANY_VOWEL = auto()
-
-    EU = auto()
-    AOE = auto()
-    
-    DUMMY = auto()
+from .Phoneme import Phoneme
 
 
-LEFT_BANK_CONSONANTS_SUBSTROKE = Stroke.from_steno("#@^+&STKPWHR")
+LEFT_BANK_CONSONANTS_SUBSTROKE = Stroke.from_steno("#STKPWHR") # Stroke.from_steno("#@^+&STKPWHR")
 VOWELS_SUBSTROKE = Stroke.from_steno("AOEU")
 RIGHT_BANK_CONSONANTS_SUBSTROKE = Stroke.from_steno("-FRPBLGTSDZ")
 ASTERISK_SUBSTROKE = Stroke.from_steno("*")
@@ -129,9 +97,9 @@ PHONEMES_TO_CHORDS_RIGHT_ALT: dict[Phoneme, Stroke] = {
 
 LINKER_CHORD = Stroke.from_steno("SWH")
 assert not (LINKER_CHORD & ~LEFT_BANK_CONSONANTS_SUBSTROKE), "Linker chord must only consist of starter keys"
-INITIAL_VOWEL_CHORD: Optional[Stroke] = Stroke.from_steno("@")
+INITIAL_VOWEL_CHORD: Optional[Stroke] = None # Stroke.from_steno("@")
 
-VARIATION_CYCLER_STROKE = Stroke.from_steno("+TPHEGT")
+VARIATION_CYCLER_STROKE = Stroke.from_steno("#TPHEGT") # Stroke.from_steno("+TPHEGT")
 # VARIATION_CYCLER_STROKE_BACKWARD = Stroke.from_steno("+*")
 
 PROHIBITED_STROKES = {
