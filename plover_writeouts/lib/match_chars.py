@@ -1,13 +1,12 @@
 from dataclasses import dataclass
-from typing import cast
+from typing import Generator, cast
 
-from .Sopheme import Sopheme, SophemeSeq
-from .AnnotatedKey import AnnotatedKey
+from .steno_annotations import AsteriskableKey, AnnotatedChord
 
 
 _GRAPHEME_TO_STENO_MAPPINGS = {
     grapheme: sorted(
-        tuple(AnnotatedKey.annotations_from_outline(outline_steno) for outline_steno in outline_stenos),
+        tuple(AsteriskableKey.annotations_from_outline(outline_steno) for outline_steno in outline_stenos),
         key=lambda keys: len(keys), reverse=True
     )
     for grapheme, outline_stenos in cast(dict[str, tuple[str, ...]], {
@@ -126,7 +125,7 @@ def match_chars_to_writeout_chords(translation: str, outline_steno: str):
     - Strict left-to-right parsing; no inversions
     """
 
-    annotated_keys = AnnotatedKey.annotations_from_outline(outline_steno)
+    annotated_keys = AsteriskableKey.annotations_from_outline(outline_steno)
 
     def create_mismatch_cell(x: int, y: int, increment_x: bool, increment_y: bool):
         mismatch_parent = matrix[x if increment_x else x + 1][y if increment_y else y + 1]
@@ -238,7 +237,7 @@ def match_chars_to_writeout_chords(translation: str, outline_steno: str):
 
     # Traceback
 
-    def traceback_sophemes(cell: _Cell):
+    def traceback_matchings(cell: _Cell) -> Generator[AnnotatedChord[str], None, None]:
         if cell.parent is None: return
 
         if cell.has_match:
@@ -248,12 +247,11 @@ def match_chars_to_writeout_chords(translation: str, outline_steno: str):
             start_cell = matrix[cell.parent.unmatched_char_start_index][cell.parent.unmatched_key_start_index]
             asterisk_matches = (False,) * (cell.y - start_cell.y)
 
-        yield from traceback_sophemes(start_cell)
+        yield from traceback_matchings(start_cell)
 
-        yield Sopheme(
-            ortho=translation[start_cell.x:cell.x],
-            steno=Sopheme.keys_to_strokes((key.key for key in annotated_keys[start_cell.y:cell.y]), asterisk_matches),
-            phono="",
+        yield AnnotatedChord(
+            data=translation[start_cell.x:cell.x],
+            chord=AnnotatedChord.keys_to_strokes((key.key for key in annotated_keys[start_cell.y:cell.y]), asterisk_matches),
         )
 
-    return SophemeSeq.of(traceback_sophemes(matrix[-1][-1]))
+    return tuple(traceback_matchings(matrix[-1][-1]))
