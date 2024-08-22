@@ -1,37 +1,13 @@
 from dataclasses import dataclass
 from typing import cast
 
-from plover.steno import Stroke
-
 from .Sopheme import Sopheme, SophemeSeq
-from .config import ASTERISK_SUBSTROKE
+from .AnnotatedKey import AnnotatedKey
 
-
-@dataclass(frozen=True)
-class _AnnotatedKey:
-    key: str
-    asterisk: bool
-
-    @staticmethod
-    def annotations_from_outline(outline_steno: str):
-        return tuple(
-            _AnnotatedKey(key, has_asterisk)
-            for stroke, has_asterisk in (
-                (stroke - ASTERISK_SUBSTROKE, ASTERISK_SUBSTROKE in stroke)
-                for stroke in (
-                    Stroke.from_steno(steno)
-                    for steno in outline_steno.split("/")
-                )
-            )
-            for key in stroke.keys() 
-        )
-    
-    def __str__(self):
-        return f"{self.key}{'(*)' if self.asterisk else ''}"
 
 _GRAPHEME_TO_STENO_MAPPINGS = {
     grapheme: sorted(
-        tuple(_AnnotatedKey.annotations_from_outline(outline_steno) for outline_steno in outline_stenos),
+        tuple(AnnotatedKey.annotations_from_outline(outline_steno) for outline_steno in outline_stenos),
         key=lambda keys: len(keys), reverse=True
     )
     for grapheme, outline_stenos in cast(dict[str, tuple[str, ...]], {
@@ -113,13 +89,13 @@ class _Cell:
     n_unmatched_chars: int
     """The total number of unmatched characters in the translation using this cell's alignment."""
     n_unmatched_keys: int
-    """The total number of unmatched characters in the translation using this cell's alignment."""
+    """The total number of unmatched keys in the outline using this cell's alignment."""
     n_sophemes: int
 
     unmatched_char_start_index: int
-    """The index where the sequence of trailing unmatched characters for this alignment beigins. This specifies which characters to check when trying to find matches."""
+    """The index where the sequence of trailing unmatched characters for this alignment beigins. Used during traceback when a match is not found by this cell."""
     unmatched_key_start_index: int
-    """The index where the sequence of trailing unmatched keys for this alignment beigins. This specifies which keys to check when trying to find matches."""
+    """The index where the sequence of trailing unmatched keys for this alignment beigins. Used during traceback when a match is not found by this cell."""
     
     parent: "_Cell | None"
     """The optimal sub-alignment which this alignment extends upon."""
@@ -150,7 +126,7 @@ def match_chars_to_writeout_chords(translation: str, outline_steno: str):
     - Strict left-to-right parsing; no inversions
     """
 
-    annotated_keys = _AnnotatedKey.annotations_from_outline(outline_steno)
+    annotated_keys = AnnotatedKey.annotations_from_outline(outline_steno)
 
     def create_mismatch_cell(x: int, y: int, increment_x: bool, increment_y: bool):
         mismatch_parent = matrix[x if increment_x else x + 1][y if increment_y else y + 1]
@@ -178,14 +154,23 @@ def match_chars_to_writeout_chords(translation: str, outline_steno: str):
 
         candidate_cells = [create_mismatch_cell(x, y, increment_x, increment_y)]
 
-        # When incrementing x, only consider silent chords
 
-        for i in reversed(range((len(candidate_chars) if increment_x else 0) + 1)):
+        # When not incrementing x, only consider silent chords
+
+        for i in range((len(candidate_chars) if increment_x else 0) + 1):
             grapheme = candidate_chars[len(candidate_chars) - i:]
             # print("using grapheme", grapheme)
             if grapheme not in _GRAPHEME_TO_STENO_MAPPINGS: continue
 
-            for chord in _GRAPHEME_TO_STENO_MAPPINGS[grapheme]:
+
+            # When not incrementing y, only consider silent letters
+
+            if increment_y:
+                chords = _GRAPHEME_TO_STENO_MAPPINGS[grapheme]
+            else:
+                chords = filter(lambda chord: len(chord) == 0, _GRAPHEME_TO_STENO_MAPPINGS[grapheme])
+
+            for chord in chords:
                 # print("testing chord", chord)
                 sub_candidate_keys = candidate_keys[len(candidate_keys) - len(chord):]
                 if tuple(key.key for key in sub_candidate_keys) != tuple(key.key for key in chord): continue
@@ -221,7 +206,7 @@ def match_chars_to_writeout_chords(translation: str, outline_steno: str):
     matrix = [[_Cell(0, 0, 0, 0, 0, None, 0, 0, False)]]
 
     for i in range(len(translation)):
-        matrix.append([create_mismatch_cell(i, -1, True, False)])
+        matrix.append([find_match(i, -1, True, False)])
 
     for i in range(len(annotated_keys)):
         matrix[0].append(find_match(-1, i, False, True))
@@ -232,7 +217,7 @@ def match_chars_to_writeout_chords(translation: str, outline_steno: str):
     for x in range(len(translation)):
         for y in range(len(annotated_keys)):
             # Increment x: add a character from the translation
-            x_candidate = create_mismatch_cell(x, y, True, False)
+            x_candidate = find_match(x, y, True, False)
 
             # Increment y: add a key from the outline
             y_candidate = find_match(x, y, False, True)
