@@ -15,20 +15,23 @@ class AsteriskableKey:
 
     @staticmethod
     def annotations_from_outline(outline_steno: str):
+        return AsteriskableKey.annotations_from_strokes(Stroke.from_steno(steno) for steno in outline_steno.split("/"))
+    
+    @staticmethod
+    def annotations_from_strokes(strokes: Iterable[Stroke]):
         return tuple(
             AsteriskableKey(key, has_asterisk)
             for stroke, has_asterisk in (
                 (stroke - ASTERISK_SUBSTROKE, ASTERISK_SUBSTROKE in stroke)
-                for stroke in (
-                    Stroke.from_steno(steno)
-                    for steno in outline_steno.split("/")
-                )
+                for stroke in strokes
             )
             for key in stroke.keys() 
         )
     
     def __str__(self):
         return f"{self.key}{'(*)' if self.asterisk else ''}"
+    
+    __repr__ = __str__
 
 T = TypeVar("T")
 
