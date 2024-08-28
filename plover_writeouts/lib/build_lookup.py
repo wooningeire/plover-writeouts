@@ -11,6 +11,7 @@ from .phoneme_util import split_consonant_phonemes
 from .util import can_add_stroke_on, split_stroke_parts
 from .config import (
     Phoneme,
+    ALL_KEYS,
     LEFT_BANK_CONSONANTS_SUBSTROKE,
     VOWELS_SUBSTROKE,
     RIGHT_BANK_CONSONANTS_SUBSTROKE,
@@ -633,6 +634,9 @@ def _create_lookup_for(trie:  NondeterministicTrie[str, str]):
         for i, stroke_steno in enumerate(stroke_stenos):
             stroke = Stroke.from_steno(stroke_steno)
             if len(stroke) == 0:
+                return None
+            
+            if stroke not in ALL_KEYS:
                 return None
             
             if stroke in PROHIBITED_STROKES:

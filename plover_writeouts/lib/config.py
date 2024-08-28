@@ -5,7 +5,10 @@ from plover.steno import Stroke
 from .Phoneme import Phoneme
 
 
-LEFT_BANK_CONSONANTS_SUBSTROKE = Stroke.from_steno("#STKPWHR") # Stroke.from_steno("#@^+&STKPWHR")
+ALL_KEYS = Stroke.from_steno("#STKPWHRAO*EUFRPBLGTSDZ")
+
+
+LEFT_BANK_CONSONANTS_SUBSTROKE = Stroke.from_steno("STKPWHR") # Stroke.from_steno("#@^+&STKPWHR")
 VOWELS_SUBSTROKE = Stroke.from_steno("AOEU")
 RIGHT_BANK_CONSONANTS_SUBSTROKE = Stroke.from_steno("-FRPBLGTSDZ")
 ASTERISK_SUBSTROKE = Stroke.from_steno("*")
@@ -14,8 +17,6 @@ ASTERISK_SUBSTROKE = Stroke.from_steno("*")
 PHONEMES_TO_CHORDS_LEFT: dict[Phoneme, Stroke] = {
     phoneme: Stroke.from_steno(steno)
     for phoneme, steno in {
-        Phoneme.DUMMY: "#",
-
         Phoneme.S: "S",
         Phoneme.T: "T",
         Phoneme.K: "K",
