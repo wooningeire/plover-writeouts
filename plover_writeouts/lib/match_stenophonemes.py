@@ -2,36 +2,35 @@ from dataclasses import dataclass
 from typing import Generator, Sequence, cast
 
 
-from .Phoneme import Phoneme
+from .Stenophoneme import Stenophoneme
 from .Sopheme import Sopheme
-from .steno_annotations import AnnotatedChord, AsteriskableKey
-
+from .steno_annotations import Phono, AsteriskableKey
 
 _PHONEME_TO_STENO_MAPPINGS = {
-    Phoneme.B: ("PW", "-B"),
-    Phoneme.D: ("TK", "-D"),
-    Phoneme.F: ("TP", "-F"),
-    Phoneme.G: ("SKWR", "TKPW", "-PBLG", "-G"),
-    Phoneme.H: ("H",),
-    Phoneme.J: ("SKWR", "-PBLG", "-G"),
-    Phoneme.K: ("K", "-BG", "*G"),
-    Phoneme.L: ("HR", "-L"),
-    Phoneme.M: ("PH", "-PL"),
-    Phoneme.N: ("TPH", "-PB"),
-    Phoneme.P: ("P", "-P"),
-    Phoneme.R: ("R", "-R"),
-    Phoneme.S: ("S", "-S", "-F", "-Z"),
-    Phoneme.T: ("T", "-T", "SH", "-RB", "KH", "-FP"),
-    Phoneme.V: ("SR", "-F"),
-    Phoneme.W: ("W", "U"),
-    Phoneme.Y: ("KWH", "KWR"),
-    Phoneme.Z: ("STKPW", "-Z", "-F", "S", "-S"),
+    Stenophoneme.B: ("PW", "-B"),
+    Stenophoneme.D: ("TK", "-D"),
+    Stenophoneme.F: ("TP", "-F"),
+    Stenophoneme.G: ("SKWR", "TKPW", "-PBLG", "-G"),
+    Stenophoneme.H: ("H",),
+    Stenophoneme.J: ("SKWR", "-PBLG", "-G"),
+    Stenophoneme.K: ("K", "-BG", "*G"),
+    Stenophoneme.L: ("HR", "-L"),
+    Stenophoneme.M: ("PH", "-PL"),
+    Stenophoneme.N: ("TPH", "-PB"),
+    Stenophoneme.P: ("P", "-P"),
+    Stenophoneme.R: ("R", "-R"),
+    Stenophoneme.S: ("S", "-S", "-F", "-Z"),
+    Stenophoneme.T: ("T", "-T", "SH", "-RB", "KH", "-FP"),
+    Stenophoneme.V: ("SR", "-F"),
+    Stenophoneme.W: ("W", "U"),
+    Stenophoneme.Y: ("KWH", "KWR"),
+    Stenophoneme.Z: ("STKPW", "-Z", "-F", "S", "-S"),
 
-    Phoneme.TH: ("TH", "*T"),
-    Phoneme.SH: ("SH", "-RB"),
-    Phoneme.CH: ("KH", "-FP"),
+    Stenophoneme.TH: ("TH", "*T"),
+    Stenophoneme.SH: ("SH", "-RB"),
+    Stenophoneme.CH: ("KH", "-FP"),
 
-    Phoneme.NG: ("-PB", "-PBG"),
+    Stenophoneme.NG: ("-PB", "-PBG"),
 }
 
 _GRAPHEME_TO_STENO_MAPPINGS = {
@@ -94,7 +93,6 @@ _GRAPHEME_TO_STENO_MAPPINGS = {
         "ey": ("AOE", "E"),
         "ie": ("AOE", "E"),
 
-        "dg": ("SKWR", "-PBLG"),
         "ck": ("K", "-BG"),
         "ti": ("SH", "-RB", "-RB/KWR"),
         "ci": ("SH", "-RB", "-RB/KWR"),
@@ -161,7 +159,7 @@ class _Cell:
         return self.cost > cell.cost
     
 
-def match_chars_to_stenophonemes(translation: str, stenophonemes: Sequence[AnnotatedChord[tuple[Sequence[str], Phoneme | str | None]]]):
+def match_chars_to_phonos(translation: str, phonos: tuple[Phono, ...]):
     """Generates an alignment between a word's ortho–steno pairs and unilex keysymbol sequence.
     
     Uses a variation of the Needleman–Wunsch algorithm.
@@ -186,10 +184,7 @@ def match_chars_to_stenophonemes(translation: str, stenophonemes: Sequence[Annot
         """Attempt to match any combination of the last m consecutive unmatched characters to the last n consecutive unmatched keys."""
 
         candidate_chars = translation[:x + 1]
-        candidate_keys = stenophonemes[:y + 1]
-
-        print()
-        print(candidate_chars, candidate_keys, x, y)
+        candidate_keys = phonos[:y + 1]
 
         candidate_cells = [create_mismatch_cell(x, y, increment_x, increment_y)]
 
@@ -198,8 +193,6 @@ def match_chars_to_stenophonemes(translation: str, stenophonemes: Sequence[Annot
 
         for i in range((len(candidate_chars) if increment_x else 0) + 1):
             grapheme = candidate_chars[len(candidate_chars) - i:]
-            if grapheme.endswith("i"):
-                print("using grapheme", grapheme)
             if grapheme not in _GRAPHEME_TO_STENO_MAPPINGS: continue
 
 
@@ -214,16 +207,12 @@ def match_chars_to_stenophonemes(translation: str, stenophonemes: Sequence[Annot
                 keys = tuple(
                     key
                     for candidate_key in candidate_keys
-                    for key in AsteriskableKey.annotations_from_strokes(candidate_key.chord)
+                    for key in AsteriskableKey.annotations_from_strokes(candidate_key.steno)
                 )
 
                 if len(chord) > len(keys): continue
 
                 keys = keys[len(keys) - len(chord):]
-
-                if grapheme.endswith("i"):
-                    print("testing chord", chord)
-                    print(keys)
 
                 if tuple(key.key for key in keys) != tuple(key.key for key in chord): continue
 
@@ -235,12 +224,11 @@ def match_chars_to_stenophonemes(translation: str, stenophonemes: Sequence[Annot
                 n_stenophonemes_spanned = 0
                 n_keys_counted = 0
                 while n_keys_counted < len(keys):
-                    n_keys_counted += sum(len(stroke) for stroke in candidate_keys[-n_stenophonemes_spanned - 1].chord)
+                    n_keys_counted += sum(len(stroke) for stroke in candidate_keys[-n_stenophonemes_spanned - 1].steno)
                     n_stenophonemes_spanned += 1
 
                 parent = matrix[x + 1 - len(grapheme)][y + 1 - n_stenophonemes_spanned]
                 
-                print("found", grapheme, chord)
                 candidate_cells.append(
                     _Cell(
                         parent.n_unmatched_chars,
@@ -256,10 +244,6 @@ def match_chars_to_stenophonemes(translation: str, stenophonemes: Sequence[Annot
                     )
                 )
 
-        for cell in candidate_cells:
-            print(cell.cost, tuple(traceback_matchings(cell)))
-            print("\t", tuple(traceback_matchings(cell.parent)) if cell.parent is not None else None)
-
         return min(candidate_cells)
 
 
@@ -269,14 +253,27 @@ def match_chars_to_stenophonemes(translation: str, stenophonemes: Sequence[Annot
 
         if cell.has_match:
             start_cell = cell.parent
-            asterisk_matches = cell.asterisk_matches
+            # asterisk_matches = cell.asterisk_matches
         else:
             start_cell = matrix[cell.parent.unmatched_char_start_index][cell.parent.unmatched_key_start_index]
-            asterisk_matches = (False,) * (cell.y - start_cell.y)
+            # asterisk_matches = (False,) * (cell.y - start_cell.y)
 
         yield from traceback_matchings(start_cell)
 
-        yield Sopheme(translation[start_cell.x:cell.x], tuple(stenophonemes[start_cell.y:cell.y]))
+        # new_phoneme =
+
+        yield Sopheme(
+            translation[start_cell.x:cell.x],
+            phonos[start_cell.y:cell.y],
+            # tuple(
+            #     Phono(
+            #         phono.keysymbols,
+            #         phono.phoneme,
+            #         phono.steno,
+            #     )
+            #     for phono in phonos[start_cell.y:cell.y]
+            # ),
+        )
 
 
     # Base row and column
@@ -286,14 +283,14 @@ def match_chars_to_stenophonemes(translation: str, stenophonemes: Sequence[Annot
     for i in range(len(translation)):
         matrix.append([find_match(i, -1, True, False)])
 
-    for i in range(len(stenophonemes)):
+    for i in range(len(phonos)):
         matrix[0].append(find_match(-1, i, False, True))
 
 
     # Populating the matrix
 
     for x in range(len(translation)):
-        for y in range(len(stenophonemes)):
+        for y in range(len(phonos)):
             # Increment x: add a character from the translation
             x_candidate = find_match(x, y, True, False)
 

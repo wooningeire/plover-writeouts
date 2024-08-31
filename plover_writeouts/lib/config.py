@@ -2,10 +2,10 @@ from typing import Optional
 
 from plover.steno import Stroke
 
-from .Phoneme import Phoneme
+from .Stenophoneme import Stenophoneme
 
 
-ALL_KEYS = Stroke.from_steno("#STKPWHRAO*EUFRPBLGTSDZ")
+ALL_KEYS = Stroke.from_steno("STKPWHRAO*EUFRPBLGTSDZ")
 
 
 LEFT_BANK_CONSONANTS_SUBSTROKE = Stroke.from_steno("STKPWHR") # Stroke.from_steno("#@^+&STKPWHR")
@@ -14,59 +14,59 @@ RIGHT_BANK_CONSONANTS_SUBSTROKE = Stroke.from_steno("-FRPBLGTSDZ")
 ASTERISK_SUBSTROKE = Stroke.from_steno("*")
 
 
-PHONEMES_TO_CHORDS_LEFT: dict[Phoneme, Stroke] = {
+PHONEMES_TO_CHORDS_LEFT: dict[Stenophoneme, Stroke] = {
     phoneme: Stroke.from_steno(steno)
     for phoneme, steno in {
-        Phoneme.S: "S",
-        Phoneme.T: "T",
-        Phoneme.K: "K",
-        Phoneme.P: "P",
-        Phoneme.W: "W",
-        Phoneme.H: "H",
-        Phoneme.R: "R",
+        Stenophoneme.S: "S",
+        Stenophoneme.T: "T",
+        Stenophoneme.K: "K",
+        Stenophoneme.P: "P",
+        Stenophoneme.W: "W",
+        Stenophoneme.H: "H",
+        Stenophoneme.R: "R",
 
-        Phoneme.Z: "STKPW",
-        Phoneme.J: "SKWR",
-        Phoneme.V: "SR",
-        Phoneme.D: "TK",
-        Phoneme.G: "TKPW",
-        Phoneme.F: "TP",
-        Phoneme.N: "TPH",
-        Phoneme.Y: "KWR",
-        Phoneme.B: "PW",
-        Phoneme.M: "PH",
-        Phoneme.L: "HR",
+        Stenophoneme.Z: "STKPW",
+        Stenophoneme.J: "SKWR",
+        Stenophoneme.V: "SR",
+        Stenophoneme.D: "TK",
+        Stenophoneme.G: "TKPW",
+        Stenophoneme.F: "TP",
+        Stenophoneme.N: "TPH",
+        Stenophoneme.Y: "KWR",
+        Stenophoneme.B: "PW",
+        Stenophoneme.M: "PH",
+        Stenophoneme.L: "HR",
 
-        Phoneme.SH: "SH",
-        Phoneme.TH: "TH",
-        Phoneme.CH: "KH",
+        Stenophoneme.SH: "SH",
+        Stenophoneme.TH: "TH",
+        Stenophoneme.CH: "KH",
     }.items()
 }
 
-PHONEMES_TO_CHORDS_RIGHT: dict[Phoneme, Stroke] = {
+PHONEMES_TO_CHORDS_RIGHT: dict[Stenophoneme, Stroke] = {
     phoneme: Stroke.from_steno(steno)
     for phoneme, steno in {
-        Phoneme.DUMMY: "",
+        Stenophoneme.DUMMY: "",
 
-        Phoneme.F: "-F",
-        Phoneme.R: "-R",
-        Phoneme.P: "-P",
-        Phoneme.B: "-B",
-        Phoneme.L: "-L",
-        Phoneme.G: "-G",
-        Phoneme.T: "-T",
-        Phoneme.S: "-S",
-        Phoneme.D: "-D",
-        Phoneme.Z: "-Z",
+        Stenophoneme.F: "-F",
+        Stenophoneme.R: "-R",
+        Stenophoneme.P: "-P",
+        Stenophoneme.B: "-B",
+        Stenophoneme.L: "-L",
+        Stenophoneme.G: "-G",
+        Stenophoneme.T: "-T",
+        Stenophoneme.S: "-S",
+        Stenophoneme.D: "-D",
+        Stenophoneme.Z: "-Z",
 
-        Phoneme.V: "-FB",
-        Phoneme.N: "-PB",
-        Phoneme.M: "-PL",
-        Phoneme.K: "-BG",
-        Phoneme.J: "-PBLG",
-        Phoneme.CH: "-FP",
-        Phoneme.SH: "-RB",
-        Phoneme.TH: "*T",
+        Stenophoneme.V: "-FB",
+        Stenophoneme.N: "-PB",
+        Stenophoneme.M: "-PL",
+        Stenophoneme.K: "-BG",
+        Stenophoneme.J: "-PBLG",
+        Stenophoneme.CH: "-FP",
+        Stenophoneme.SH: "-RB",
+        Stenophoneme.TH: "*T",
     }.items()
 
     # "SHR": "shr",
@@ -76,23 +76,24 @@ PHONEMES_TO_CHORDS_RIGHT: dict[Phoneme, Stroke] = {
     # "-FRB": (Phoneme.R, Phoneme.V),
 }
 
-PHONEMES_TO_CHORDS_LEFT_ALT: dict[Phoneme, Stroke] = {
+PHONEMES_TO_CHORDS_LEFT_ALT: dict[Stenophoneme, Stroke] = {
     phoneme: Stroke.from_steno(steno)
     for phoneme, steno in {
-        Phoneme.V: "W",
+        Stenophoneme.V: "W",
+        Stenophoneme.Z: "S*",
     }.items()
 }
 
-PHONEMES_TO_CHORDS_RIGHT_ALT: dict[Phoneme, Stroke] = {
+PHONEMES_TO_CHORDS_RIGHT_ALT: dict[Stenophoneme, Stroke] = {
     phoneme: Stroke.from_steno(steno)
     for phoneme, steno in {
-        Phoneme.S: "-F",
-        Phoneme.Z: "-F",
-        Phoneme.V: "-F",
-        Phoneme.TH: "-F",
-        Phoneme.M: "-FR",
-        Phoneme.J: "-FR",
-        Phoneme.K: "*G",
+        Stenophoneme.S: "-F",
+        Stenophoneme.Z: "-F",
+        Stenophoneme.V: "-F",
+        Stenophoneme.TH: "-F",
+        Stenophoneme.M: "-FR",
+        Stenophoneme.J: "-FR",
+        Stenophoneme.K: "*G",
     }.items()
 }
 
@@ -108,72 +109,72 @@ PROHIBITED_STROKES = {
     for steno in ("AEU",)
 }
 
-CLUSTERS: dict[tuple[Phoneme, ...], Stroke] = {
+CLUSTERS: dict[tuple[Stenophoneme, ...], Stroke] = {
     phonemes: Stroke.from_steno(steno)
     for phonemes, steno in {
-        (Phoneme.D, Phoneme.S): "STK",
-        (Phoneme.D, Phoneme.S, Phoneme.T): "STK",
-        (Phoneme.D, Phoneme.S, Phoneme.K): "STK",
-        (Phoneme.K, Phoneme.N): "K",
-        (Phoneme.K, Phoneme.M, Phoneme.P): "KP",
-        (Phoneme.K, Phoneme.M, Phoneme.B): "KPW",
-        (Phoneme.L, Phoneme.F): "-FL",
-        (Phoneme.L, Phoneme.V): "-FL",
-        (Phoneme.G, Phoneme.L): "-LG",
-        (Phoneme.L, Phoneme.J): "-LG",
-        (Phoneme.K, Phoneme.L): "*LG",
-        (Phoneme.N, Phoneme.J): "-PBG",
-        (Phoneme.M, Phoneme.J): "-PLG",
-        (Phoneme.R, Phoneme.F): "*FR",
-        (Phoneme.R, Phoneme.S): "*FR",
-        (Phoneme.R, Phoneme.V): "-FRB",
-        (Phoneme.L, Phoneme.CH): "-LG",
-        (Phoneme.R, Phoneme.CH): "-FRPB",
-        (Phoneme.N, Phoneme.CH): "-FRPBLG",
-        (Phoneme.L, Phoneme.SH): "*RB",
-        (Phoneme.R, Phoneme.SH): "*RB",
-        (Phoneme.N, Phoneme.SH): "*RB",
-        (Phoneme.M, Phoneme.P): "*PL",
-        (Phoneme.T, Phoneme.L): "-LT",
+        (Stenophoneme.D, Stenophoneme.S): "STK",
+        (Stenophoneme.D, Stenophoneme.S, Stenophoneme.T): "STK",
+        (Stenophoneme.D, Stenophoneme.S, Stenophoneme.K): "STK",
+        (Stenophoneme.K, Stenophoneme.N): "K",
+        (Stenophoneme.K, Stenophoneme.M, Stenophoneme.P): "KP",
+        (Stenophoneme.K, Stenophoneme.M, Stenophoneme.B): "KPW",
+        (Stenophoneme.L, Stenophoneme.F): "-FL",
+        (Stenophoneme.L, Stenophoneme.V): "-FL",
+        (Stenophoneme.G, Stenophoneme.L): "-LG",
+        (Stenophoneme.L, Stenophoneme.J): "-LG",
+        (Stenophoneme.K, Stenophoneme.L): "*LG",
+        (Stenophoneme.N, Stenophoneme.J): "-PBG",
+        (Stenophoneme.M, Stenophoneme.J): "-PLG",
+        (Stenophoneme.R, Stenophoneme.F): "*FR",
+        (Stenophoneme.R, Stenophoneme.S): "*FR",
+        (Stenophoneme.R, Stenophoneme.V): "-FRB",
+        (Stenophoneme.L, Stenophoneme.CH): "-LG",
+        (Stenophoneme.R, Stenophoneme.CH): "-FRPB",
+        (Stenophoneme.N, Stenophoneme.CH): "-FRPBLG",
+        (Stenophoneme.L, Stenophoneme.SH): "*RB",
+        (Stenophoneme.R, Stenophoneme.SH): "*RB",
+        (Stenophoneme.N, Stenophoneme.SH): "*RB",
+        (Stenophoneme.M, Stenophoneme.P): "*PL",
+        (Stenophoneme.T, Stenophoneme.L): "-LT",
     }.items()
 }
 
-VOWEL_CONSCIOUS_CLUSTERS: "dict[tuple[Phoneme | Stroke, ...], Stroke]" = {
+VOWEL_CONSCIOUS_CLUSTERS: "dict[tuple[Stenophoneme | Stroke, ...], Stroke]" = {
     tuple(
         Stroke.from_steno(phoneme) if isinstance(phoneme, str) else phoneme
         for phoneme in phonemes
     ): Stroke.from_steno(steno)
     for phonemes, steno in {
-        (Phoneme.ANY_VOWEL, Phoneme.N, Phoneme.T): "SPW",
-        (Phoneme.ANY_VOWEL, Phoneme.N, Phoneme.D): "SPW",
-        (Phoneme.ANY_VOWEL, Phoneme.M, Phoneme.P): "KPW",
-        (Phoneme.ANY_VOWEL, Phoneme.M, Phoneme.B): "KPW",
-        (Phoneme.ANY_VOWEL, Phoneme.N, Phoneme.K): "SKPW",
-        (Phoneme.ANY_VOWEL, Phoneme.N, Phoneme.G): "SKPW",
-        (Phoneme.ANY_VOWEL, Phoneme.N, Phoneme.J): "SKPW",
-        ("E", Phoneme.K, Phoneme.S): "SKW",
-        ("E", Phoneme.K, Phoneme.S, Phoneme.T): "STKW",
-        ("E", Phoneme.K, Phoneme.S, Phoneme.K): "SKW",
-        ("E", Phoneme.K, Phoneme.S, Phoneme.P): "SKPW",
-        (Phoneme.ANY_VOWEL, Phoneme.N): "TPH",
-        (Phoneme.ANY_VOWEL, Phoneme.N, Phoneme.S): "STPH",
-        (Phoneme.ANY_VOWEL, Phoneme.M): "PH",
+        (Stenophoneme.ANY_VOWEL, Stenophoneme.N, Stenophoneme.T): "SPW",
+        (Stenophoneme.ANY_VOWEL, Stenophoneme.N, Stenophoneme.D): "SPW",
+        (Stenophoneme.ANY_VOWEL, Stenophoneme.M, Stenophoneme.P): "KPW",
+        (Stenophoneme.ANY_VOWEL, Stenophoneme.M, Stenophoneme.B): "KPW",
+        (Stenophoneme.ANY_VOWEL, Stenophoneme.N, Stenophoneme.K): "SKPW",
+        (Stenophoneme.ANY_VOWEL, Stenophoneme.N, Stenophoneme.G): "SKPW",
+        (Stenophoneme.ANY_VOWEL, Stenophoneme.N, Stenophoneme.J): "SKPW",
+        ("E", Stenophoneme.K, Stenophoneme.S): "SKW",
+        ("E", Stenophoneme.K, Stenophoneme.S, Stenophoneme.T): "STKW",
+        ("E", Stenophoneme.K, Stenophoneme.S, Stenophoneme.K): "SKW",
+        ("E", Stenophoneme.K, Stenophoneme.S, Stenophoneme.P): "SKPW",
+        (Stenophoneme.ANY_VOWEL, Stenophoneme.N): "TPH",
+        (Stenophoneme.ANY_VOWEL, Stenophoneme.N, Stenophoneme.S): "STPH",
+        (Stenophoneme.ANY_VOWEL, Stenophoneme.M): "PH",
     }.items()
 }
 
 
-DIPHTHONG_TRANSITIONS_BY_FIRST_VOWEL: dict[Stroke, Phoneme] = {
+DIPHTHONG_TRANSITIONS_BY_FIRST_VOWEL: dict[Stroke, Stenophoneme] = {
     Stroke.from_steno(steno): phoneme
     for steno, phoneme in {
-        "E": Phoneme.Y,
-        "OE": Phoneme.W,
-        "OU": Phoneme.W,
-        "EU": Phoneme.Y,
-        "AOE": Phoneme.Y,
-        "AOU": Phoneme.W,
-        "AEU": Phoneme.Y,
-        "OEU": Phoneme.Y,
-        "AOEU": Phoneme.Y,
+        "E": Stenophoneme.Y,
+        "OE": Stenophoneme.W,
+        "OU": Stenophoneme.W,
+        "EU": Stenophoneme.Y,
+        "AOE": Stenophoneme.Y,
+        "AOU": Stenophoneme.W,
+        "AEU": Stenophoneme.Y,
+        "OEU": Stenophoneme.Y,
+        "AOEU": Stenophoneme.Y,
     }.items()
 }
 

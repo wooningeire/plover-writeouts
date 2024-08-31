@@ -1,6 +1,6 @@
 from enum import Enum, auto
 
-class Phoneme(Enum):
+class Stenophoneme(Enum):
     S = auto()
     T = auto()
     K = auto()

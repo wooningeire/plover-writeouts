@@ -3,6 +3,7 @@ from typing import Generic, TypeVar, Iterable
 
 from plover.steno import Stroke
 
+from .Stenophoneme import Stenophoneme
 from .util import can_add_stroke_on
 from .config import ASTERISK_SUBSTROKE
 
@@ -66,5 +67,26 @@ class AnnotatedChord(Generic[T]):
 
     def __str__(self):
         return f"{self.data}.{'/'.join(stroke.rtfcre for stroke in self.chord)}"
+    
+    __repr__ = __str__
+
+@dataclass(frozen=True)
+class Phono:
+    keysymbols: tuple[str, ...]
+    phoneme: "Stenophoneme | str | None"
+    steno: tuple[Stroke, ...]
+
+    def __str__(self):
+        out = " ".join(self.keysymbols)
+        if len(self.keysymbols) > 1:
+            out = f"({out})"
+
+
+        out += f".{self.phoneme}" if self.phoneme is not None else "."
+
+        if len(self.steno) > 0:
+            out += f"[{'/'.join(stroke.rtfcre for stroke in self.steno)}]"
+
+        return out
     
     __repr__ = __str__

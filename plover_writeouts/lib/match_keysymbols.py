@@ -2,40 +2,40 @@ from dataclasses import dataclass
 from typing import Generator, Sequence, cast
 from itertools import cycle
 
-from .Phoneme import Phoneme
-from .steno_annotations import AnnotatedChord, AsteriskableKey
+from .Stenophoneme import Stenophoneme
+from .steno_annotations import Phono, AnnotatedChord, AsteriskableKey
 
 
 _PHONEME_TO_STENO_MAPPINGS = {
-    Phoneme.B: ("PW", "-B"),
-    Phoneme.D: ("TK", "-D"),
-    Phoneme.F: ("TP", "-F"),
-    Phoneme.G: ("SKWR", "TKPW", "-PBLG", "-G"),
-    Phoneme.H: ("H",),
-    Phoneme.J: ("SKWR", "-PBLG", "-G"),
-    Phoneme.K: ("K", "-BG", "*G"),
-    Phoneme.L: ("HR", "-L"),
-    Phoneme.M: ("PH", "-PL"),
-    Phoneme.N: ("TPH", "-PB"),
-    Phoneme.P: ("P", "-P"),
-    Phoneme.R: ("R", "-R"),
-    Phoneme.S: ("S", "-S", "-F", "-Z"),
-    Phoneme.T: ("T", "-T", "SH", "-RB", "KH", "-FP"),
-    Phoneme.V: ("SR", "-F"),
-    Phoneme.W: ("W", "U"),
-    Phoneme.Y: ("KWH", "KWR"),
-    Phoneme.Z: ("STKPW", "-Z", "-F", "S", "-S"),
+    Stenophoneme.B: ("PW", "-B"),
+    Stenophoneme.D: ("TK", "-D"),
+    Stenophoneme.F: ("TP", "-F"),
+    Stenophoneme.G: ("SKWR", "TKPW", "-PBLG", "-G"),
+    Stenophoneme.H: ("H",),
+    Stenophoneme.J: ("SKWR", "-PBLG", "-G"),
+    Stenophoneme.K: ("K", "-BG", "*G"),
+    Stenophoneme.L: ("HR", "-L"),
+    Stenophoneme.M: ("PH", "-PL"),
+    Stenophoneme.N: ("TPH", "-PB"),
+    Stenophoneme.P: ("P", "-P"),
+    Stenophoneme.R: ("R", "-R"),
+    Stenophoneme.S: ("S", "-S", "-F", "-Z", "KR"),
+    Stenophoneme.T: ("T", "-T", "SH", "-RB", "KH", "-FP"),
+    Stenophoneme.V: ("SR", "-F"),
+    Stenophoneme.W: ("W", "U"),
+    Stenophoneme.Y: ("KWH", "KWR"),
+    Stenophoneme.Z: ("STKPW", "-Z", "-F", "S", "-S"),
 
-    Phoneme.TH: ("TH", "*T"),
-    Phoneme.SH: ("SH", "-RB"),
-    Phoneme.CH: ("KH", "-FP"),
+    Stenophoneme.TH: ("TH", "*T"),
+    Stenophoneme.SH: ("SH", "-RB"),
+    Stenophoneme.CH: ("KH", "-FP"),
 
-    Phoneme.NG: ("-PB", "-PBG"),
+    Stenophoneme.NG: ("-PB", "-PBG"),
 }
 
 @dataclass(frozen=True)
 class _Mapping:
-    phoneme: Phoneme | str
+    phoneme: Stenophoneme | str
     keys: tuple[AsteriskableKey, ...]
 
 _mappings = lambda phoneme: tuple(zip(cycle((phoneme,)), _PHONEME_TO_STENO_MAPPINGS[phoneme]))
@@ -47,46 +47,46 @@ _KEYSYMBOL_TO_STENO_MAPPINGS = {
         key=lambda mapping: len(mapping.keys),
         reverse=True,
     )
-    for keysymbol, mapping in cast(dict[str, tuple[tuple[Phoneme | str, str], ...]], {
+    for keysymbol, mapping in cast(dict[str, tuple[tuple[Stenophoneme | str, str], ...]], {
         # How does each keysymbol appear as it does in Lapwing?
 
-        "p": _mappings(Phoneme.P),
-        "t": _mappings(Phoneme.T),
+        "p": _mappings(Stenophoneme.P),
+        "t": _mappings(Stenophoneme.T),
         "?": (),  # glottal stop
-        "t^": (*_mappings(Phoneme.T), *_mappings(Phoneme.R)),  # tapped R
-        "k": _mappings(Phoneme.K),
-        "x": _mappings(Phoneme.K),
-        "b": _mappings(Phoneme.B),
-        "d": _mappings(Phoneme.D),
-        "g": _mappings(Phoneme.G),
-        "ch": _mappings(Phoneme.CH),
-        "jh": _mappings(Phoneme.J),
-        "s": _mappings(Phoneme.S),
-        "z": _mappings(Phoneme.Z),
-        "sh": _mappings(Phoneme.SH),
-        "zh": (*_mappings(Phoneme.SH), *_mappings(Phoneme.J)),
-        "f": _mappings(Phoneme.F),
-        "v": _mappings(Phoneme.V),
-        "th": _mappings(Phoneme.TH),
-        "dh": _mappings(Phoneme.TH),
-        "h": _mappings(Phoneme.H),
-        "m": _mappings(Phoneme.M),
-        "m!": _mappings(Phoneme.M),
-        "n": _mappings(Phoneme.N),
-        "n!": _mappings(Phoneme.N),
-        "ng": _mappings(Phoneme.NG),
-        "l": _mappings(Phoneme.L),
-        "ll": _mappings(Phoneme.L),
-        "lw": _mappings(Phoneme.L),
-        "l!": _mappings(Phoneme.L),
-        "r": _mappings(Phoneme.R),
-        "y": _mappings(Phoneme.Y),
-        "w": _mappings(Phoneme.W),
-        "hw": _mappings(Phoneme.W),
+        "t^": (*_mappings(Stenophoneme.T), *_mappings(Stenophoneme.R)),  # tapped R
+        "k": _mappings(Stenophoneme.K),
+        "x": _mappings(Stenophoneme.K),
+        "b": _mappings(Stenophoneme.B),
+        "d": _mappings(Stenophoneme.D),
+        "g": _mappings(Stenophoneme.G),
+        "ch": _mappings(Stenophoneme.CH),
+        "jh": _mappings(Stenophoneme.J),
+        "s": _mappings(Stenophoneme.S),
+        "z": _mappings(Stenophoneme.Z),
+        "sh": _mappings(Stenophoneme.SH),
+        "zh": (*_mappings(Stenophoneme.SH), *_mappings(Stenophoneme.J)),
+        "f": _mappings(Stenophoneme.F),
+        "v": _mappings(Stenophoneme.V),
+        "th": _mappings(Stenophoneme.TH),
+        "dh": _mappings(Stenophoneme.TH),
+        "h": _mappings(Stenophoneme.H),
+        "m": _mappings(Stenophoneme.M),
+        "m!": _mappings(Stenophoneme.M),
+        "n": _mappings(Stenophoneme.N),
+        "n!": _mappings(Stenophoneme.N),
+        "ng": _mappings(Stenophoneme.NG),
+        "l": _mappings(Stenophoneme.L),
+        "ll": _mappings(Stenophoneme.L),
+        "lw": _mappings(Stenophoneme.L),
+        "l!": _mappings(Stenophoneme.L),
+        "r": _mappings(Stenophoneme.R),
+        "y": _mappings(Stenophoneme.Y),
+        "w": _mappings(Stenophoneme.W),
+        "hw": _mappings(Stenophoneme.W),
 
         "e": _vowels("E", "AOE", "AEU"),
         "ao": _vowels("A", "O", "AO", "AU",),
-        "a": _vowels("A",),
+        "a": _vowels("A", "AEU"),
         "ah": _vowels("AU"),
         "oa": _vowels("A", "AO", "O"),
         "aa": _vowels("AU",),
@@ -96,7 +96,7 @@ _KEYSYMBOL_TO_STENO_MAPPINGS = {
         "ouw": _vowels("OE",),
         "oou": _vowels("OE",),
         "o": _vowels("O", "AU"),
-        "au": _vowels("O", "AU"),
+        "au": _vowels("O", "A", "AU"),
         "oo": _vowels("O", "AU"),
         "or": _vowels("O", "AU"),
         "our": _vowels("O", "AU"),
@@ -124,8 +124,9 @@ _KEYSYMBOL_TO_STENO_MAPPINGS = {
         "@@r": _vowels("A", "O", "E", "U", "EU"),
         "er": _vowels("E", "U"),
         "eir": _vowels("E", "AEU"),
-        "ur": _vowels("U",),
+        "ur": _vowels("U", "AOU"),
         "i@": _vowels("KWRA", "KWRO", "KWRE", "KWRU", "KWREU", "KWHA", "KWHO", "KWHE", "KWHU", "KWHEU"),
+        
         "k s": _vowels("KP",),
         "sh n": _vowels("-GS",),
         "k sh n": _vowels("-BGS",),
@@ -156,7 +157,7 @@ class _Cell:
     has_match: bool
     asterisk_matches: tuple[bool, ...] = ()
 
-    phoneme_match: "Phoneme | str | None" = None
+    phoneme_match: "Stenophoneme | str | None" = None
 
     @property
     def cost(self):
@@ -289,7 +290,7 @@ def match_keysymbols_to_writeout_chords(keysymbols: tuple[str, ...], outline_ste
 
     # Traceback
 
-    def traceback_matchings(cell: _Cell) -> Generator[AnnotatedChord[tuple[Sequence[str], Phoneme | str | None]], None, None]:
+    def traceback_matchings(cell: _Cell) -> Generator[Phono, None, None]:
         if cell.parent is None: return
 
         if cell.has_match:
@@ -301,9 +302,7 @@ def match_keysymbols_to_writeout_chords(keysymbols: tuple[str, ...], outline_ste
 
         yield from traceback_matchings(start_cell)
 
-        yield AnnotatedChord(
-            data=(keysymbols[start_cell.x:cell.x], cell.phoneme_match),
-            chord=AnnotatedChord.keys_to_strokes((key.key for key in annotated_keys[start_cell.y:cell.y]), asterisk_matches),
-        )
+        chord = AnnotatedChord.keys_to_strokes((key.key for key in annotated_keys[start_cell.y:cell.y]), asterisk_matches)
+        yield Phono(keysymbols[start_cell.x:cell.x], cell.phoneme_match, chord)
 
     return tuple(traceback_matchings(matrix[-1][-1]))

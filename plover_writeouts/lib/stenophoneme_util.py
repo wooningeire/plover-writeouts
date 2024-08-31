@@ -3,9 +3,9 @@ from typing import Optional
 from plover.steno import Stroke
 
 from .Trie import Trie
-from .config import Phoneme, PHONEMES_TO_CHORDS_LEFT, PHONEMES_TO_CHORDS_RIGHT
+from .config import Stenophoneme, PHONEMES_TO_CHORDS_LEFT, PHONEMES_TO_CHORDS_RIGHT
 
-_CONSONANT_CHORDS: dict[Stroke, tuple[Phoneme, ...]] = {
+_CONSONANT_CHORDS: dict[Stroke, tuple[Stenophoneme, ...]] = {
     **{
         stroke: (phoneme,)
         for phoneme, stroke in PHONEMES_TO_CHORDS_LEFT.items()
@@ -18,14 +18,14 @@ _CONSONANT_CHORDS: dict[Stroke, tuple[Phoneme, ...]] = {
     **{
         Stroke.from_steno(steno): phonemes
         for steno, phonemes in {
-            "PHR": (Phoneme.P, Phoneme.L),
-            "TPHR": (Phoneme.F, Phoneme.L),
+            "PHR": (Stenophoneme.P, Stenophoneme.L),
+            "TPHR": (Stenophoneme.F, Stenophoneme.L),
         }.items()
     },
 }
 
 def _build_consonants_trie():
-    consonants_trie: Trie[str, tuple[Phoneme, ...]] = Trie()
+    consonants_trie: Trie[str, tuple[Stenophoneme, ...]] = Trie()
     for stroke, _phoneme in _CONSONANT_CHORDS.items():
         current_head = consonants_trie.get_dst_node_else_create_chain(consonants_trie.ROOT, stroke.keys())
         consonants_trie.set_translation(current_head, _phoneme)
@@ -42,7 +42,7 @@ def split_consonant_phonemes(consonants_stroke: Stroke):
 
         longest_chord_end_index = chord_start_index
 
-        entry: tuple[Phoneme, ...] = ()
+        entry: tuple[Stenophoneme, ...] = ()
 
         for seek_index in range(chord_start_index, len(keys)):
             key = keys[seek_index]

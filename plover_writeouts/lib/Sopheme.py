@@ -1,16 +1,20 @@
 from dataclasses import dataclass
 from typing import Iterable, Sequence
 
-from .Phoneme import Phoneme
-from .steno_annotations import AnnotatedChord
+from .Stenophoneme import Stenophoneme
+from .steno_annotations import Phono
 
 @dataclass(frozen=True)
 class Sopheme:
     ortho: str
-    stenophonemes: tuple[AnnotatedChord[tuple[Phoneme | str | None, ...]], ...]
+    phono: tuple[Phono, ...]
 
     def __str__(self):
-        return f"{self.ortho}.{self.stenophonemes}"
+        out = " ".join(str(phono) for phono in self.phono)
+        if len(self.phono) > 1:
+            out = f"({out})"
+
+        return f"{self.ortho}.{out}"
     
     __repr__ = __str__
 

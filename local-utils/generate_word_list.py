@@ -15,23 +15,21 @@ _NONPHONETIC_KEYSYMBOLS = tuple("*~-.<>{}#=$")
 
 def _main():
     from plover_writeouts.lib.match_keysymbols import match_keysymbols_to_writeout_chords
-    from plover_writeouts.lib.match_stenophonemes import match_chars_to_stenophonemes
+    from plover_writeouts.lib.match_stenophonemes import match_chars_to_phonos
 
-    transcription = "~ a . k w ii . * e s"
-    outline_steno = "A/KWEU/KWRES"
+    # transcription = "~ a . k w ii . * e s"
+    # outline_steno = "A/KWEU/KWRES"
 
-    phonetic_keysymbols = tuple(filter(lambda keysymbol: not any(ch in keysymbol for ch in _NONPHONETIC_KEYSYMBOLS), transcription.split(" ")))
+    # phonetic_keysymbols = tuple(filter(lambda keysymbol: not any(ch in keysymbol for ch in _NONPHONETIC_KEYSYMBOLS), transcription.split(" ")))
 
-    stenophonemes = match_keysymbols_to_writeout_chords(phonetic_keysymbols, outline_steno)
-    sophemes = match_chars_to_stenophonemes("aquiesce", stenophonemes)
+    # phonos = match_keysymbols_to_writeout_chords(phonetic_keysymbols, outline_steno)
+    # sophemes = match_chars_to_phonos("aquiesce", phonos)
 
-    # sophemes = match_sophemes(stenographemes, stenophonemes)
 
-    print(stenophonemes)
-    print(sophemes)
+    # print(phonos)
     # print(sophemes)
 
-    return
+    # return
 
     with open(Path(__file__).parent.parent / "local-utils/data/lapwing-base.json", "r", encoding="utf-8") as file:
         lapwing_dict = json.load(file)
@@ -80,11 +78,10 @@ def _main():
 
 
                     for outline_steno in reverse_lapwing_dict[translation]:
-                        stenophonemes = match_keysymbols_to_writeout_chords(tuple(phonetic_keysymbols), outline_steno)
-                        sophemes = match_chars_to_stenophonemes(translation, stenophonemes)
-                        # sophemes = match_sophemes(stenographemes, stenophonemes)
+                        phonos = match_keysymbols_to_writeout_chords(tuple(phonetic_keysymbols), outline_steno)
+                        sophemes = match_chars_to_phonos(translation, phonos)
 
-                        out_file.write(translation + " " + " ".join(str(sopheme) for sopheme in sophemes) + "\n")
+                        out_file.write(" ".join(str(sopheme) for sopheme in sophemes) + "\n")
 
                         # out_file.write(" ".join(f"{sopheme.ortho}.({' '.join(
                         #     keysymbol
