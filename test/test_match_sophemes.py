@@ -3,5 +3,5 @@ def test__match_graphemes_to_writeout_chords__baseline():
 
     assert (
         " ".join(str(sopheme) for sopheme in match_sophemes("zygote", " { z * ae . g ou t } ", "STKPWAOEU/TKPWOET"))
-        == "z.z[STKPW] y.ae[AOEU] g.g[TKPW] o.ou[OE] t.t[-T] e."
+        == "z.z[Z] y.ae[II] g.g[G] o.ou[OO] t.t[T] e."
     )

@@ -29,6 +29,20 @@ class Stenophoneme(Enum):
 
     ANY_VOWEL = auto()
 
+    AA = auto()
+    A = auto()
+    EE = auto()
+    E = auto()
+    II = auto()
+    I = auto()
+    OO = auto()
+    O = auto()
+    UU = auto()
+    U = auto()
+    AU = auto()
+    OI = auto()
+    OU = auto()
+
     DUMMY = auto()
 
     def __str__(self):

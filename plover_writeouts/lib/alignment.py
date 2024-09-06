@@ -79,7 +79,7 @@ class AlignmentService[Cost, MatchData, ItemX, ItemY, Match](ABC):
         ...
 
     @staticmethod
-    def match_data(subseq_x: Sliceable[ItemX], subseq_y: Sliceable[ItemY]) -> MatchData:
+    def match_data(subseq_x: Sliceable[ItemX], subseq_y: Sliceable[ItemY], pre_subseq_x: Sliceable[ItemX], pre_subseq_y: Sliceable[ItemY]) -> MatchData:
         ...
 
     @staticmethod
@@ -161,7 +161,7 @@ def aligner(Service: type[AlignmentService[Cost, MatchData, Sliceable[ItemX], Sl
                             x + 1,
                             y + 1,
                             True,
-                            Service.match_data(candidate_subseq_x_key, candidate_subseq_y_key),
+                            Service.match_data(candidate_subseq_x_key, candidate_subseq_y_key, candidate_subseq_x, candidate_subseq_y),
                         )
                     )
 

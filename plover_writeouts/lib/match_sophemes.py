@@ -25,8 +25,8 @@ _KEYSYMBOL_TO_GRAPHEME_MAPPINGS = {
         "jh": ("j", "g"),
         "s": ("s", "c", "sc"),
         "z": ("z", "s"),
-        "sh": ("sh", "ti", "ci"),
-        "zh": ("sh", "zh", "j", "g"),
+        "sh": ("sh", "ti", "ci", "si"),
+        "zh": ("sh", "zh", "j", "g", "si", "ti", "ci"),
         "f": ("f", "ph", "ff"),
         "v": ("v",),
         "th": ("th",),
@@ -65,12 +65,12 @@ _KEYSYMBOL_TO_GRAPHEME_MAPPINGS = {
         "ii": ("e", "i", "ee", "ea", "ie", "ei"),
         "iy": ("i", "y", "ey", "ei"),
         "i": ("i", "y"),
-        "@r": ("a", "o", "e", "u", "i", "y"),
-        "@": ("a", "o", "e", "u", "i", "y"),
+        "@r": ("a", "o", "e", "u", "i", "y", "au", "ou"),
+        "@": ("a", "o", "e", "u", "i", "y", "au", "ou"),
         "uh": ("u",),
         "u": ("u", "o", "oo"),
-        "uu": ("u", "uu", "oo", "ew"),
-        "iu": ("u", "uu", "oo", "ew"),
+        "uu": ("u", "uu", "oo", "ew", "eu"),
+        "iu": ("u", "uu", "oo", "ew", "eu"),
         "ei": ("ai", "ei", "a", "e"),
         "ee": ("ai", "ei", "a", "e"),
         "ai": ("i", "ie", "y", "ye"),
@@ -83,7 +83,7 @@ _KEYSYMBOL_TO_GRAPHEME_MAPPINGS = {
         "owr": ("ou", "ow", "ao"),
         "oow": ("ou", "ow", "ao"),
         "ir": ("e", "ee", "ea", "ie", "ei", "i", "y", "ey"),
-        "@@r": ("a", "e", "i", "o", "u", "y"),
+        "@@r": ("a", "e", "i", "o", "u", "y", "au", "ou"),
         "er": ("e",),
         "eir": ("ai", "ei", "a", "e"),
         "ur": ("u", "o", "oo"),
@@ -222,6 +222,19 @@ _PHONEME_TO_STENO_MAPPINGS = {
     Stenophoneme.CH: ("KH", "-FP"),
 
     Stenophoneme.NG: ("-PB", "-PBG"),
+
+    Stenophoneme.AA: ("A", "AEU", "AE"),
+    Stenophoneme.A: ("A", "AE"),
+    Stenophoneme.EE: ("AOE", "EU", "E"),
+    Stenophoneme.E: ("E", "AEU"),
+    Stenophoneme.II: ("AOEU",),
+    Stenophoneme.I: ("EU",),
+    Stenophoneme.OO: ("OE", "AU", "O"),
+    Stenophoneme.O: ("AU", "O"),
+    Stenophoneme.UU: ("AOU", "U", "AO"),
+    Stenophoneme.U: ("U", "AO"),
+    Stenophoneme.OI: ("OEU",),
+    Stenophoneme.OU: ("OU", "AO"),
 }
 
 @dataclass(frozen=True)
@@ -232,6 +245,24 @@ class _Mapping:
 _mappings = lambda phoneme: tuple(zip(cycle((phoneme,)), _PHONEME_TO_STENO_MAPPINGS[phoneme]))
 _vowels = lambda *phonemes: tuple(zip(phonemes, phonemes))
 _no_phoneme = lambda stenos: tuple(zip(cycle((None,)), stenos))
+
+_any_vowel_mapping = (
+    (Stenophoneme.A, "A"),
+    (Stenophoneme.O, "O"),
+    (Stenophoneme.E, "E"),
+    (Stenophoneme.U, "U"),
+    (Stenophoneme.U, "AO"),
+    (Stenophoneme.AA, "AE"),
+    (Stenophoneme.AU, "AU"),
+    (Stenophoneme.OO, "OE"),
+    (Stenophoneme.OU, "OU"),
+    (Stenophoneme.I, "EU"),
+    (Stenophoneme.EE, "AOE"),
+    (Stenophoneme.UU, "AOU"),
+    (Stenophoneme.AA, "AEU"),
+    (Stenophoneme.OI, "OEU"),
+    (Stenophoneme.II, "AOEU"),
+)
 
 _KEYSYMBOL_TO_STENO_MAPPINGS = {
     tuple(keysymbol.split(" ")): sorted(
@@ -276,52 +307,54 @@ _KEYSYMBOL_TO_STENO_MAPPINGS = {
         "w": _mappings(Stenophoneme.W),
         "hw": _mappings(Stenophoneme.W),
 
-        "e": _vowels("E", "AOE", "AEU"),
-        "ao": _vowels("A", "O", "AO", "AU",),
-        "a": _vowels("A", "AEU"),
-        "ah": _vowels("AU"),
-        "oa": _vowels("A", "AO", "O"),
-        "aa": _vowels("AU",),
-        "ar": _vowels("A",),
-        "eh": _vowels("A",),
-        "ou": _vowels("OE",),
-        "ouw": _vowels("OE",),
-        "oou": _vowels("OE",),
-        "o": _vowels("O", "AU"),
-        "au": _vowels("O", "A", "AU"),
-        "oo": _vowels("O", "AU"),
-        "or": _vowels("O", "AU"),
-        "our": _vowels("O", "AU"),
-        "ii": _vowels("AOE", "EU", "E"),
-        "iy": _vowels("AOE", "EU"),
-        "i": _vowels("EU",),
-        "@r": _vowels("A", "O", "E", "U", "EU"),
-        "@": _vowels("A", "O", "E", "U", "EU"),
-        "uh": _vowels("U",),
-        "u": _vowels("U", "AO", "O", "OE"),
-        "uu": _vowels("AOU", "AO"),
-        "iu": _vowels("AOU", "AO"),
-        "ei": _vowels("E", "AEU"),
-        "ee": _vowels("E", "AEU", "A"),
-        "ai": _vowels("AOEU",),
-        "ae": _vowels("AOEU",),
-        "aer": _vowels("AOEU",),
-        "aai": _vowels("AOEU",),
-        "oi": _vowels("OEU",),
-        "oir": _vowels("OEU",),
-        "ow": _vowels("OU",),
-        "owr": _vowels("OU",),
-        "oow": _vowels("OU",),
-        "ir": _vowels("AOE", "EU"),
-        "@@r": _vowels("A", "O", "E", "U", "EU"),
-        "er": _vowels("E", "U"),
-        "eir": _vowels("E", "AEU"),
-        "ur": _vowels("U", "AOU"),
+        "e": (*_mappings(Stenophoneme.E), *_mappings(Stenophoneme.EE), *_mappings(Stenophoneme.AA)),
+        "ao": (*_mappings(Stenophoneme.A), *_mappings(Stenophoneme.AA), *_mappings(Stenophoneme.O), *_mappings(Stenophoneme.U)),
+        "a": (*_mappings(Stenophoneme.A), *_mappings(Stenophoneme.AA)),
+        "ah": _mappings(Stenophoneme.O),
+        "oa": (*_mappings(Stenophoneme.A), *_mappings(Stenophoneme.O), *_mappings(Stenophoneme.U)),
+        "aa": _mappings(Stenophoneme.O),
+        "ar": _mappings(Stenophoneme.A),
+        "eh": _mappings(Stenophoneme.A),
+        "ou": _mappings(Stenophoneme.OO),
+        "ouw": _mappings(Stenophoneme.OO),
+        "oou": _mappings(Stenophoneme.OO),
+        "o": _mappings(Stenophoneme.O),
+        "au": (*_mappings(Stenophoneme.O), *_mappings(Stenophoneme.A)),
+        "oo": _mappings(Stenophoneme.O),
+        "or": _mappings(Stenophoneme.O),
+        "our": _mappings(Stenophoneme.O),
+        "ii": _mappings(Stenophoneme.EE),
+        "iy": _mappings(Stenophoneme.EE),
+        "i": (*_mappings(Stenophoneme.I), *_mappings(Stenophoneme.EE)),
+        "@r": _any_vowel_mapping,
+        "@": _any_vowel_mapping,
+        "uh": _mappings(Stenophoneme.U),
+        "u": (*_mappings(Stenophoneme.U), *_mappings(Stenophoneme.O), *_mappings(Stenophoneme.OO)),
+        "uu": _mappings(Stenophoneme.UU),
+        "iu": _mappings(Stenophoneme.UU),
+        "ei": (*_mappings(Stenophoneme.E), *_mappings(Stenophoneme.AA)),
+        "ee": (*_mappings(Stenophoneme.E), *_mappings(Stenophoneme.AA), *_mappings(Stenophoneme.A)),
+        "ai": _mappings(Stenophoneme.II),
+        "ae": _mappings(Stenophoneme.II),
+        "aer": _mappings(Stenophoneme.II),
+        "aai": _mappings(Stenophoneme.II),
+        "oi": _mappings(Stenophoneme.OI),
+        "oir": _mappings(Stenophoneme.OI),
+        "ow": _mappings(Stenophoneme.OU),
+        "owr": _mappings(Stenophoneme.OU),
+        "oow": _mappings(Stenophoneme.OU),
+        "ir": _mappings(Stenophoneme.EE),
+        "@@r": _any_vowel_mapping,
+        "er": (*_mappings(Stenophoneme.E), *_mappings(Stenophoneme.U)),
+        "eir": _mappings(Stenophoneme.E),
+        "ur": (*_mappings(Stenophoneme.U), *_mappings(Stenophoneme.UU)),
         "i@": _vowels("KWRA", "KWRO", "KWRE", "KWRU", "KWREU", "KWHA", "KWHO", "KWHE", "KWHU", "KWHEU"),
         
         "k s": _no_phoneme("KP",),
         "sh n": _no_phoneme("-GS",),
+        "zh n": _no_phoneme("-GS",),
         "k sh n": _no_phoneme("-BGS",),
+        "k zh n": _no_phoneme("-BGS",),
         "m p": _no_phoneme("*PL"),
     }).items()
 }
@@ -375,7 +408,7 @@ class _match_chars_to_keysymbols(AlignmentService, ABC):
         )
     
     @staticmethod
-    def match_data(subseq_keysymbols: tuple[str, ...], subseq_chars: str):
+    def match_data(subseq_keysymbols: tuple[str, ...], subseq_chars: str, pre_subseq_keysymbols: tuple[str, ...], pre_subseq_chars: str):
         return None
 
     @staticmethod
@@ -403,14 +436,17 @@ def match_transcription_to_chars(transcription: str, translation: str):
 class Sopheme:
     orthokeysymbols: tuple[Orthokeysymbol, ...]
     steno: tuple[Stroke, ...]
+    phoneme: "Stenophoneme | str | None"
 
     def __str__(self):
         out = " ".join(str(orthokeysymbol) for orthokeysymbol in self.orthokeysymbols)
-        if len(self.orthokeysymbols) > 1:
+        if len(self.orthokeysymbols) > 1 and self.phoneme is not None:
             out = f"({out})"
 
-        if len(self.steno) > 0:
-            out += f"[{'/'.join(stroke.rtfcre for stroke in self.steno)}]"
+        if self.phoneme is not None:
+            out += f"[{self.phoneme}]"
+        elif len(self.steno) > 0:
+            out += f"[[{'/'.join(stroke.rtfcre for stroke in self.steno)}]]"
             
         return out
     
@@ -434,11 +470,19 @@ class _match_orthokeysymbols_to_keys(AlignmentService, ABC):
     
     @staticmethod
     def generate_candidate_x_key(candidate_subseq_x: tuple[Orthokeysymbol, ...]) -> tuple[str, ...]:
-        return tuple(
-            keysymbol
-            for orthokeysymbol in candidate_subseq_x
-            for keysymbol in (orthokeysymbol.keysymbols if len(orthokeysymbol.keysymbols) > 0 else ("",))
-        )
+        keysymbols = []
+
+        if len(candidate_subseq_x) > 0 and len(candidate_subseq_x[0].keysymbols) == 0:
+            keysymbols.append("")
+
+        for orthokeysymbol in candidate_subseq_x:
+            for keysymbol in orthokeysymbol.keysymbols:
+                keysymbols.append(keysymbol)
+
+        if len(candidate_subseq_x) > 0 and len(candidate_subseq_x[-1].keysymbols) == 0:
+            keysymbols.append("")
+
+        return tuple(keysymbols)
     
     @staticmethod
     def generate_candidate_y_key(mapping: _Mapping) -> tuple[AsteriskableKey, ...]:
@@ -467,14 +511,18 @@ class _match_orthokeysymbols_to_keys(AlignmentService, ABC):
         )
     
     @staticmethod
-    def match_data(subseq_keysymbols: tuple[str, ...], subseq_keys: tuple[AsteriskableKey, ...]):
-        return tuple(key.asterisk for key in subseq_keys)
+    def match_data(subseq_keysymbols: tuple[str, ...], subseq_keys: tuple[AsteriskableKey, ...], pre_subseq_keysymbols: tuple[Orthokeysymbol, ...], pre_subseq_keys: _Mapping):
+        return (
+            tuple(key.asterisk for key in subseq_keys),
+            pre_subseq_keys.phoneme,
+        )
 
     @staticmethod
-    def construct_match(orthokeysymbols: tuple[Orthokeysymbol, ...], keys: tuple[AsteriskableKey, ...], start_cell: Cell[_Cost, None], end_cell: Cell[_Cost, None], asterisk_matches: "tuple[bool, ...] | None"):
+    def construct_match(orthokeysymbols: tuple[Orthokeysymbol, ...], keys: tuple[AsteriskableKey, ...], start_cell: Cell[_Cost, None], end_cell: Cell[_Cost, None], match_data: "tuple[tuple[bool, ...], Stenophoneme | str] | None"):
         return Sopheme(
             orthokeysymbols[start_cell.x:end_cell.x],
-            AnnotatedChord.keys_to_strokes((key.key for key in keys[start_cell.y:end_cell.y]), asterisk_matches or (False,) * (end_cell.y - start_cell.y)),
+            AnnotatedChord.keys_to_strokes((key.key for key in keys[start_cell.y:end_cell.y]), match_data[0] if match_data is not None else (False,) * (end_cell.y - start_cell.y)),
+            match_data[1] if match_data is not None else None,
         )
 
 def match_orthokeysymbols_to_chords(orthokeysymbols: tuple[Orthokeysymbol, ...], outline_steno: str):

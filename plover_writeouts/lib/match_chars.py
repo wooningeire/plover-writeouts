@@ -142,7 +142,7 @@ class _match_chars_to_keys(AlignmentService, ABC):
         )
     
     @staticmethod
-    def match_data(subseq_chars: str, subseq_keys: tuple[AsteriskableKey, ...]):
+    def match_data(subseq_chars: str, subseq_keys: tuple[AsteriskableKey, ...], pre_subseq_chars: str, pre_subseq_keys: tuple[AsteriskableKey, ...]):
         return tuple(key.asterisk for key in subseq_keys)
 
     @staticmethod
