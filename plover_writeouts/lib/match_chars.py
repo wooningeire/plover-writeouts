@@ -105,7 +105,7 @@ class _Cost(NamedTuple):
     """The total number of unmatched characters in the translation using this cell's alignment."""
     n_unmatched_keys: int
     """The total number of unmatched keys in the outline using this cell's alignment."""
-    n_sophemes: int
+    n_chunks: int
     
 
 @aligner
@@ -121,7 +121,7 @@ class _match_chars_to_keys(AlignmentService, ABC):
         return _Cost(
             mismatch_parent.cost.n_unmatched_chars + (1 if increment_x else 0),
             mismatch_parent.cost.n_unmatched_keys + (1 if increment_y else 0),
-            mismatch_parent.cost.n_sophemes + 1 if mismatch_parent.has_match else mismatch_parent.cost.n_sophemes,
+            mismatch_parent.cost.n_chunks + 1 if mismatch_parent.has_match else mismatch_parent.cost.n_chunks,
         )
     
     @staticmethod
@@ -139,18 +139,18 @@ class _match_chars_to_keys(AlignmentService, ABC):
         return _Cost(
             parent.cost.n_unmatched_chars,
             parent.cost.n_unmatched_keys,
-            parent.cost.n_sophemes + 1,
+            parent.cost.n_chunks + 1,
         )
     
     @staticmethod
-    def match_data(subseq_chars: str, subseq_y: tuple[AsteriskableKey, ...]):
-        return tuple(key.asterisk for key in subseq_y)
+    def match_data(subseq_chars: str, subseq_keys: tuple[AsteriskableKey, ...]):
+        return tuple(key.asterisk for key in subseq_keys)
 
     @staticmethod
-    def construct_match(seq_x: str, seq_y: tuple[AsteriskableKey, ...], start_cell: Cell[_Cost, tuple[bool, ...]], end_cell: Cell[_Cost, tuple[bool, ...]], asterisk_matches: "tuple[bool, ...] | None"):
+    def construct_match(translation: str, keys: tuple[AsteriskableKey, ...], start_cell: Cell[_Cost, tuple[bool, ...]], end_cell: Cell[_Cost, tuple[bool, ...]], asterisk_matches: "tuple[bool, ...] | None"):
         return AnnotatedChord(
-            data=seq_x[start_cell.x:end_cell.x],
-            chord=AnnotatedChord.keys_to_strokes((key.key for key in seq_y[start_cell.y:end_cell.y]), asterisk_matches or (False,) * (end_cell.y - start_cell.y)),
+            data=translation[start_cell.x:end_cell.x],
+            chord=AnnotatedChord.keys_to_strokes((key.key for key in keys[start_cell.y:end_cell.y]), asterisk_matches or (False,) * (end_cell.y - start_cell.y)),
         )
 
 def match_chars_to_writeout_chords(translation: str, outline_steno: str):

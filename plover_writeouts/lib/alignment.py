@@ -59,6 +59,18 @@ class AlignmentService[Cost, MatchData, ItemX, ItemY, Match](ABC):
         ...
 
     @staticmethod
+    def generate_candidate_x_key(candidate_subseq_x: Sliceable[ItemX]) -> Sliceable[ItemX]:
+        return candidate_subseq_x
+    
+    @staticmethod
+    def generate_candidate_y_key(candidate_subseq_y: Sliceable[ItemY]) -> Sliceable[ItemY]:
+        return candidate_subseq_y
+    
+    @staticmethod
+    def y_seq_len(candidate_subseq_y: Sliceable[ItemY]) -> int:
+        return len(candidate_subseq_y)
+
+    @staticmethod
     def is_match(actual_subseq_y: Sliceable[ItemY], candidate_subseq_y: Sliceable[ItemY]) -> bool:
         ...
 
@@ -104,40 +116,42 @@ def aligner(Service: type[AlignmentService[Cost, MatchData, Sliceable[ItemX], Sl
         def find_match(x: int, y: int, increment_x: bool, increment_y: bool):
             """Attempt to match any combination of the last m consecutive unmatched characters to the last n consecutive unmatched keys."""
 
-            candidate_seq_x = seq_x[:x + 1]
-            candidate_seq_y = seq_y[:y + 1]
+            domain_seq_x = seq_x[:x + 1]
+            domain_seq_y = seq_y[:y + 1]
 
             # print()
-            # print(unmatched_chars, unmatched_keys, x, y)
+            # print(domain_seq_x, domain_seq_y, x, y)
 
             candidate_cells = [create_mismatch_cell(x, y, increment_x, increment_y)]
 
 
             # When not incrementing x, only consider silent chords
 
-            for i in range((len(candidate_seq_x) if increment_x else 0) + 1):
-                candidate_subseq_x = candidate_seq_x[len(candidate_seq_x) - i:]
-                # print("using grapheme", grapheme)
-                if candidate_subseq_x not in mappings: continue
+            for i in range((len(domain_seq_x) if increment_x else 0) + 1):
+                candidate_subseq_x = domain_seq_x[len(domain_seq_x) - i:]
+                candidate_subseq_x_key = Service.generate_candidate_x_key(candidate_subseq_x)
+                # print("using grapheme", candidate_subseq_x_key)
+                if candidate_subseq_x_key not in mappings: continue
 
 
                 # When not incrementing y, only consider silent letters
 
-                sub_candidate_subseqs_y: Iterable[Sliceable[ItemY]]
+                candidate_subseqs_y: Iterable[Sliceable[ItemY]]
                 if increment_y:
-                    sub_candidate_subseqs_y = mappings[candidate_subseq_x]
+                    candidate_subseqs_y = mappings[candidate_subseq_x_key]
                 else:
-                    sub_candidate_subseqs_y = filter(lambda chord: len(chord) == 0, mappings[candidate_subseq_x])
+                    candidate_subseqs_y = filter(lambda chord: Service.y_seq_len(chord) == 0, mappings[candidate_subseq_x_key])
 
-                for sub_candidate_subseq_y in sub_candidate_subseqs_y:
-                    # print("testing chord", chord)
-                    actual_subseq_y = candidate_seq_y[len(candidate_seq_y) - len(sub_candidate_subseq_y):]
+                for candidate_subseq_y in candidate_subseqs_y:
+                    candidate_subseq_y_key = Service.generate_candidate_y_key(candidate_subseq_y)
+                    # print("testing chord", candidate_subseq_y_key)
+                    actual_subseq_y = domain_seq_y[len(domain_seq_y) - len(candidate_subseq_y_key):]
 
-                    if not Service.is_match(actual_subseq_y, sub_candidate_subseq_y): continue
+                    if not Service.is_match(actual_subseq_y, candidate_subseq_y_key): continue
 
-                    parent = matrix[x + 1 - len(candidate_subseq_x)][y + 1 - len(sub_candidate_subseq_y)]
+                    parent = matrix[x + 1 - len(candidate_subseq_x)][y + 1 - len(actual_subseq_y)]
                     
-                    # print("found", grapheme, chord)
+                    # print("found", candidate_subseq_x_key, candidate_subseq_y_key)
                     candidate_cells.append(
                         Cell(
                             Service.match_cost(parent),
@@ -147,7 +161,7 @@ def aligner(Service: type[AlignmentService[Cost, MatchData, Sliceable[ItemX], Sl
                             x + 1,
                             y + 1,
                             True,
-                            Service.match_data(candidate_subseq_x, sub_candidate_subseq_y),
+                            Service.match_data(candidate_subseq_x_key, candidate_subseq_y_key),
                         )
                     )
 
