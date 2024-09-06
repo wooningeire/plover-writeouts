@@ -7,10 +7,10 @@ from plover.steno import Stroke
 import plover.log
 
 from .Trie import ReadonlyTrie, Transition, TransitionCostInfo, Trie, NondeterministicTrie
-from .phoneme_util import split_consonant_phonemes
+from .stenophoneme_util import split_consonant_phonemes
 from .util import can_add_stroke_on, split_stroke_parts
 from .config import (
-    Phoneme,
+    Stenophoneme,
     ALL_KEYS,
     LEFT_BANK_CONSONANTS_SUBSTROKE,
     VOWELS_SUBSTROKE,
@@ -36,7 +36,7 @@ from .config import (
 
 
 def _build_clusters_trie():
-    clusters_trie: Trie[Phoneme, Stroke] = Trie()
+    clusters_trie: Trie[Stenophoneme, Stroke] = Trie()
     for phonemes, stroke in CLUSTERS.items():
         current_head = clusters_trie.ROOT
         for key in phonemes:
@@ -48,7 +48,7 @@ _clusters_trie = _build_clusters_trie()
 
 
 def _build_vowel_clusters_trie():
-    clusters_trie: "Trie[Phoneme | Stroke, Stroke]" = Trie()
+    clusters_trie: "Trie[Stenophoneme | Stroke, Stroke]" = Trie()
     for phonemes, stroke in VOWEL_CONSCIOUS_CLUSTERS.items():
         current_head = clusters_trie.ROOT
         for key in phonemes:
@@ -100,13 +100,13 @@ class ClusterRight(Cluster):
 
 
 class ConsonantVowelGroup(NamedTuple):
-    consonants: tuple[Phoneme, ...]
+    consonants: tuple[Stenophoneme, ...]
     vowel: Stroke
 
 @dataclass(frozen=True)
 class OutlinePhonemes:
     nonfinals: tuple[ConsonantVowelGroup, ...]
-    final_consonants: tuple[Phoneme, ...]
+    final_consonants: tuple[Stenophoneme, ...]
 
     def get_consonants(self, group_index: int):
         if group_index == len(self.nonfinals):
@@ -190,7 +190,7 @@ class OutlinePhonemes:
 
 @dataclass(frozen=True)
 class AnnotatedPhoneme:
-    phoneme: Phoneme
+    phoneme: Stenophoneme
 
 
 def build_lookup(mappings: dict[str, str]):
@@ -208,7 +208,7 @@ def build_lookup(mappings: dict[str, str]):
 def _get_outline_phonemes(outline: Iterable[Stroke]):
     consonant_vowel_groups: list[ConsonantVowelGroup] = []
 
-    current_group_consonants: list[Phoneme] = []
+    current_group_consonants: list[Stenophoneme] = []
     
     for stroke in outline:
         left_bank_consonants, vowels, right_bank_consonants, asterisk = split_stroke_parts(stroke)
@@ -306,7 +306,7 @@ def _add_entry(trie: NondeterministicTrie[str, str], phonemes: OutlinePhonemes, 
 
         vowels_src_node: Optional[int] = None
         if len(consonants) == 0 and not state.is_first_consonant_set:
-            vowels_src_node = trie.get_first_dst_node_else_create(state.left_consonant_src_node, TRIE_LINKER_KEY)
+            vowels_src_node = trie.get_first_dst_node_else_create(state.left_consonant_src_node, TRIE_LINKER_KEY, TransitionCostInfo(0, translation))
 
         for phoneme_index, consonant in enumerate(consonants):
             state.phoneme_index = phoneme_index
@@ -336,16 +336,16 @@ def _add_entry(trie: NondeterministicTrie[str, str], phonemes: OutlinePhonemes, 
         # if it matches verbatim
         if vowels_src_node is None:
             vowels_src_node = state.left_consonant_src_node
-        postvowels_node = trie.get_first_dst_node_else_create(vowels_src_node, vowel.rtfcre)
+        postvowels_node = trie.get_first_dst_node_else_create(vowels_src_node, vowel.rtfcre, TransitionCostInfo(0, translation))
 
         _handle_clusters(upcoming_clusters, state.left_consonant_src_node, state.right_consonant_src_node, state, True)
 
 
         state.right_consonant_src_node = postvowels_node
-        state.left_consonant_src_node = trie.get_first_dst_node_else_create(postvowels_node, TRIE_STROKE_BOUNDARY_KEY)
+        state.left_consonant_src_node = trie.get_first_dst_node_else_create(postvowels_node, TRIE_STROKE_BOUNDARY_KEY, TransitionCostInfo(0, translation))
 
         if INITIAL_VOWEL_CHORD is not None and state.is_first_consonant_set and len(consonants) == 0:
-            trie.link_chain(trie.ROOT, state.left_consonant_src_node, INITIAL_VOWEL_CHORD.keys())
+            trie.link_chain(trie.ROOT, state.left_consonant_src_node, INITIAL_VOWEL_CHORD.keys(), TransitionCostInfo(0, translation))
 
         state.prev_left_consonant_node = None
 
@@ -423,7 +423,7 @@ def _find_vowel_clusters(
             node
             for current_node in current_nodes
             for node in (_vowel_clusters_trie.get_dst_node(current_node, phoneme),)
-                    + ((_vowel_clusters_trie.get_dst_node(current_node, Phoneme.ANY_VOWEL),) if isinstance(phoneme, Stroke) else ())
+                    + ((_vowel_clusters_trie.get_dst_node(current_node, Stenophoneme.ANY_VOWEL),) if isinstance(phoneme, Stroke) else ())
             if node is not None
         }
 
@@ -460,9 +460,9 @@ def _add_left_consonant(state: EntryBuilderState):
     left_stroke = PHONEMES_TO_CHORDS_LEFT[state.consonant]
     left_stroke_keys = left_stroke.keys()
 
-    left_consonant_node = state.trie.get_first_dst_node_else_create_chain(state.left_consonant_src_node, left_stroke_keys)
+    left_consonant_node = state.trie.get_first_dst_node_else_create_chain(state.left_consonant_src_node, left_stroke_keys, TransitionCostInfo(0, state.translation))
     if state.left_elision_boundary_src_node is not None:
-        state.trie.link_chain(state.left_elision_boundary_src_node, left_consonant_node, left_stroke_keys)
+        state.trie.link_chain(state.left_elision_boundary_src_node, left_consonant_node, left_stroke_keys, TransitionCostInfo(0, state.translation))
 
     if state.last_left_alt_consonant_node is not None:
         state.trie.link_chain(
@@ -506,7 +506,7 @@ def _add_left_alt_consonant(state: EntryBuilderState, left_consonant_node: int):
 
     left_alt_consonant_node = state.trie.get_first_dst_node_else_create_chain(state.left_consonant_src_node, left_alt_stroke_keys, TransitionCostInfo(TransitionCosts.ALT_CONSONANT, state.translation))
     if state.left_elision_boundary_src_node is not None:
-        state.trie.link_chain(state.left_elision_boundary_src_node, left_alt_consonant_node, left_alt_stroke_keys)
+        state.trie.link_chain(state.left_elision_boundary_src_node, left_alt_consonant_node, left_alt_stroke_keys, TransitionCostInfo(0, state.translation))
 
     if state.last_left_alt_consonant_node is not None:
         state.trie.link_chain(
@@ -529,7 +529,7 @@ def _add_right_consonant(state: EntryBuilderState, left_consonant_node: Optional
     right_stroke = PHONEMES_TO_CHORDS_RIGHT[state.consonant]
     right_stroke_keys = right_stroke.keys()
     
-    right_consonant_node = state.trie.get_first_dst_node_else_create_chain(state.right_consonant_src_node, right_stroke_keys)
+    right_consonant_node = state.trie.get_first_dst_node_else_create_chain(state.right_consonant_src_node, right_stroke_keys, TransitionCostInfo(0, state.translation))
 
 
     if state.last_right_alt_consonant_node is not None:
@@ -541,16 +541,16 @@ def _add_right_consonant(state: EntryBuilderState, left_consonant_node: Optional
         or state.last_consonant in PHONEMES_TO_CHORDS_RIGHT and can_add_stroke_on(PHONEMES_TO_CHORDS_RIGHT[state.last_consonant], right_stroke)
     )
     if state.prev_left_consonant_node is not None and not can_use_main_prev:
-        state.trie.link_chain(state.prev_left_consonant_node, right_consonant_node, right_stroke_keys)
+        state.trie.link_chain(state.prev_left_consonant_node, right_consonant_node, right_stroke_keys, TransitionCostInfo(0, state.translation))
 
 
     pre_rtl_stroke_boundary_node = state.right_elision_squish_src_node
     rtl_stroke_boundary_node = None
 
-    if left_consonant_node is not None and state.consonant is not Phoneme.DUMMY:
+    if left_consonant_node is not None and state.consonant is not Stenophoneme.DUMMY:
         pre_rtl_stroke_boundary_node = right_consonant_node
-        rtl_stroke_boundary_node = state.trie.get_first_dst_node_else_create(right_consonant_node, TRIE_STROKE_BOUNDARY_KEY)
-        state.trie.link(rtl_stroke_boundary_node, left_consonant_node, TRIE_LINKER_KEY)
+        rtl_stroke_boundary_node = state.trie.get_first_dst_node_else_create(right_consonant_node, TRIE_STROKE_BOUNDARY_KEY, TransitionCostInfo(0, state.translation))
+        state.trie.link(rtl_stroke_boundary_node, left_consonant_node, TRIE_LINKER_KEY, TransitionCostInfo(0, state.translation))
         
 
     if state.is_first_consonant:
@@ -598,7 +598,7 @@ def _add_right_alt_consonant(state: EntryBuilderState, right_consonant_node: int
         )
 
     if state.prev_left_consonant_node is not None and not should_use_alt_from_prev:
-        state.trie.link_chain(state.prev_left_consonant_node, right_alt_consonant_node, right_alt_stroke_keys)
+        state.trie.link_chain(state.prev_left_consonant_node, right_alt_consonant_node, right_alt_stroke_keys, TransitionCostInfo(0, state.translation))
         
     if state.is_first_consonant:
         _allow_elide_previous_vowel_using_first_right_consonant(state, right_alt_stroke, right_consonant_node, TransitionCosts.ALT_CONSONANT)
@@ -636,18 +636,18 @@ def _create_lookup_for(trie:  NondeterministicTrie[str, str]):
             if len(stroke) == 0:
                 return None
             
-            if stroke not in ALL_KEYS:
-                return None
-            
-            if stroke in PROHIBITED_STROKES:
-                return None
-            
             if stroke == VARIATION_CYCLER_STROKE:
                 n_variation += 1
                 continue
             # if stroke == VARIATION_CYCLER_STROKE_BACKWARD:
             #     n_variation -= 1
             #     continue
+            
+            if stroke not in ALL_KEYS:
+                return None
+            
+            if stroke in PROHIBITED_STROKES:
+                return None
 
             if n_variation > 0:
                 return None

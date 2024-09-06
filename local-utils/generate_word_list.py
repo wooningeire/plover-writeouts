@@ -16,20 +16,23 @@ _NONPHONETIC_KEYSYMBOLS = tuple("*~-.<>{}#=$")
 def _main():
     from plover_writeouts.lib.match_keysymbols import match_keysymbols_to_writeout_chords
     from plover_writeouts.lib.match_stenophonemes import match_chars_to_phonos
+    from plover_writeouts.lib.match_chars import match_chars_to_writeout_chords
 
-    # transcription = "~ a . k w ii . * e s"
-    # outline_steno = "A/KWEU/KWRES"
+    transcription = "~ a . k w ii . * e s"
+    outline_steno = "A/KWEU/KWRES"
 
-    # phonetic_keysymbols = tuple(filter(lambda keysymbol: not any(ch in keysymbol for ch in _NONPHONETIC_KEYSYMBOLS), transcription.split(" ")))
+    phonetic_keysymbols = tuple(filter(lambda keysymbol: not any(ch in keysymbol for ch in _NONPHONETIC_KEYSYMBOLS), transcription.split(" ")))
 
-    # phonos = match_keysymbols_to_writeout_chords(phonetic_keysymbols, outline_steno)
-    # sophemes = match_chars_to_phonos("aquiesce", phonos)
+    phonos = match_keysymbols_to_writeout_chords(phonetic_keysymbols, outline_steno)
+    sophemes = match_chars_to_phonos("aquiesce", phonos)
 
 
-    # print(phonos)
-    # print(sophemes)
+    print(phonos)
+    print(sophemes)
 
-    # return
+    print(match_chars_to_writeout_chords("aquiesce", outline_steno))
+
+    return
 
     with open(Path(__file__).parent.parent / "local-utils/data/lapwing-base.json", "r", encoding="utf-8") as file:
         lapwing_dict = json.load(file)

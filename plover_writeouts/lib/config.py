@@ -79,6 +79,7 @@ PHONEMES_TO_CHORDS_RIGHT: dict[Stenophoneme, Stroke] = {
 PHONEMES_TO_CHORDS_LEFT_ALT: dict[Stenophoneme, Stroke] = {
     phoneme: Stroke.from_steno(steno)
     for phoneme, steno in {
+        Stenophoneme.F: "W",
         Stenophoneme.V: "W",
         Stenophoneme.Z: "S*",
     }.items()
@@ -127,6 +128,7 @@ CLUSTERS: dict[tuple[Stenophoneme, ...], Stroke] = {
         (Stenophoneme.M, Stenophoneme.J): "-PLG",
         (Stenophoneme.R, Stenophoneme.F): "*FR",
         (Stenophoneme.R, Stenophoneme.S): "*FR",
+        (Stenophoneme.R, Stenophoneme.M): "*FR",
         (Stenophoneme.R, Stenophoneme.V): "-FRB",
         (Stenophoneme.L, Stenophoneme.CH): "-LG",
         (Stenophoneme.R, Stenophoneme.CH): "-FRPB",
@@ -158,6 +160,8 @@ VOWEL_CONSCIOUS_CLUSTERS: "dict[tuple[Stenophoneme | Stroke, ...], Stroke]" = {
         ("E", Stenophoneme.K, Stenophoneme.S, Stenophoneme.P): "SKPW",
         (Stenophoneme.ANY_VOWEL, Stenophoneme.N): "TPH",
         (Stenophoneme.ANY_VOWEL, Stenophoneme.N, Stenophoneme.S): "STPH",
+        (Stenophoneme.ANY_VOWEL, Stenophoneme.N, Stenophoneme.F): "TPWH",
+        (Stenophoneme.ANY_VOWEL, Stenophoneme.N, Stenophoneme.V): "TPWH",
         (Stenophoneme.ANY_VOWEL, Stenophoneme.M): "PH",
     }.items()
 }
