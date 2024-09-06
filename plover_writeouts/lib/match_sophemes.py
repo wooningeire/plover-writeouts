@@ -453,8 +453,8 @@ class _match_orthokeysymbols_to_keys(AlignmentService, ABC):
         return (
             tuple(key.key for key in actual_chord) == tuple(key.key for key in candidate_chord)
             and all(
-                candidate_key.asterisk or not actual_key.asterisk
-                for actual_key, candidate_key in zip(actual_chord, candidate_chord)
+                not canidate_key.asterisk or actual_key.asterisk
+                for actual_key, canidate_key in zip(actual_chord, candidate_chord)
             )
         )
     

@@ -52,7 +52,7 @@ _GRAPHEME_TO_STENO_MAPPINGS = {
         "ee": ("AOE",),
         "ii": ("AOE", "EU"),
         "oo": ("AO",),
-        "ou": ("U",),
+        "ou": ("U", "OU"),
         "ea": ("AOE", "AE"),
         "ae": ("AE", "AEU"),
         "ai": ("AEU", "AOEU"),
@@ -61,7 +61,6 @@ _GRAPHEME_TO_STENO_MAPPINGS = {
         "aw": ("AU",),
         "oi": ("OEU",),
         "oy": ("OEU",),
-        "ou": ("OU",),
         "ow": ("OU",),
         "ei": ("AOE", "E"),
         "ey": ("AOE", "E"),
@@ -129,8 +128,8 @@ class _match_chars_to_keys(AlignmentService, ABC):
         return (
             tuple(key.key for key in actual_chord) == tuple(key.key for key in candidate_chord)
             and all(
-                candidate_key.asterisk or not actual_key.asterisk
-                for actual_key, candidate_key in zip(actual_chord, candidate_chord)
+                not canidate_key.asterisk or actual_key.asterisk
+                for actual_key, canidate_key in zip(actual_chord, candidate_chord)
             )
         )
     
