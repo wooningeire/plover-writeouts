@@ -53,7 +53,7 @@ class Cell(Generic[Cost, MatchData]):
     def __gt__(self, cell: "Cell"):
         return self.cost > cell.cost
 
-class AlignmentService[Cost, MatchData, InputX, InputY, MappingX, MappingY, ItemX, ItemY, Match](ABC):
+class AlignmentService(Generic[Cost, MatchData, InputX, InputY, MappingX, MappingY, ItemX, ItemY, Match], ABC):
     MAPPINGS: Mapping[MappingX, MappingY]
 
     @staticmethod

@@ -26,12 +26,12 @@ _KEYSYMBOL_TO_GRAPHEME_MAPPINGS = {
         "g": ("g", "gg"),
         "ch": ("ch", "t", "tt"),
         "jh": ("j", "g"),
-        "s": ("s", "ss", "c", "sc"),
-        "z": ("z", "zz", "s", "ss"),
+        "s": ("s", "ss", "c", "sc", "z", "zz"),
+        "z": ("z", "zz", "s", "ss", "x"),
         "sh": ("sh", "ti", "ci", "si"),
         "zh": ("sh", "zh", "j", "g", "si", "ti", "ci"),
-        "f": ("f", "ph", "ff"),
-        "v": ("v",),
+        "f": ("f", "ph", "ff", "v", "vv"),
+        "v": ("v", "vv", "f", "ff", "ph"),
         "th": ("th",),
         "dh": ("th",),
         "h": ("h",),
@@ -93,7 +93,9 @@ _KEYSYMBOL_TO_GRAPHEME_MAPPINGS = {
         "i@": ("ia", "ie", "io", "iu"),
 
         "t s": ("z",),
+        "d z": ("z",),
         "k s": ("x",),
+        "g z": ("x",),
     }.items()
 }
 
@@ -116,7 +118,7 @@ _PHONEME_TO_STENO_MAPPINGS = {
     Stenophoneme.V: ("SR", "-F"),
     Stenophoneme.W: ("W", "U"),
     Stenophoneme.Y: ("KWH", "KWR"),
-    Stenophoneme.Z: ("STKPW", "-Z", "-F", "S", "-S"),
+    Stenophoneme.Z: ("STKPW", "-Z", "-F", "S", "-S", "KP"),
 
     Stenophoneme.TH: ("TH", "*T"),
     Stenophoneme.SH: ("SH", "-RB"),
@@ -171,13 +173,13 @@ _KEYSYMBOL_TO_STENO_MAPPINGS = {
         # How does each keysymbol appear as it does in Lapwing?
 
         "p": _mappings(Stenophoneme.P),
-        "t": _mappings(Stenophoneme.T),
+        "t": (*_mappings(Stenophoneme.T), *_mappings(Stenophoneme.D)),
         "?": (),  # glottal stop
         "t^": (*_mappings(Stenophoneme.T), *_mappings(Stenophoneme.R)),  # tapped R
         "k": _mappings(Stenophoneme.K),
         "x": _mappings(Stenophoneme.K),
         "b": _mappings(Stenophoneme.B),
-        "d": _mappings(Stenophoneme.D),
+        "d": (*_mappings(Stenophoneme.D), *_mappings(Stenophoneme.T)),
         "g": _mappings(Stenophoneme.G),
         "ch": _mappings(Stenophoneme.CH),
         "jh": _mappings(Stenophoneme.J),
@@ -248,6 +250,7 @@ _KEYSYMBOL_TO_STENO_MAPPINGS = {
         "i@": _vowels("KWRA", "KWRO", "KWRE", "KWRU", "KWREU", "KWHA", "KWHO", "KWHE", "KWHU", "KWHEU"),
         
         "k s": _no_phoneme("KP"),
+        "g z": _no_phoneme("KP"),
         "sh n": _no_phoneme("-GS"),
         "zh n": _no_phoneme("-GS"),
         "k sh n": _no_phoneme("-BGS"),
@@ -262,13 +265,32 @@ class _Cost(NamedTuple):
     n_unmatched_chars: int
     n_chunks: int
 
+
+@dataclass(frozen=True)
+class Keysymbol:
+    symbol: str
+    match_symbol: str
+    stress: int
+    optional: bool
+
+    def __str__(self):
+        out = self.symbol
+        if self.stress > 0:
+            out += f"!{self.stress}"
+        if self.optional:
+            out += "?"
+
+        return out
+    
+    __repr__ = __str__
+
 @dataclass(frozen=True)
 class Orthokeysymbol:
-    keysymbols: tuple[str, ...]
+    keysymbols: tuple[Keysymbol, ...]
     chars: str
 
     def __str__(self):
-        keysymbols_string = " ".join(self.keysymbols)
+        keysymbols_string = " ".join(str(keysymbol) for keysymbol in self.keysymbols)
         if len(self.keysymbols) > 1:
             keysymbols_string = f"({keysymbols_string})"
 
@@ -279,19 +301,32 @@ class Orthokeysymbol:
 
 
 _NONPHONETIC_KEYSYMBOLS = tuple("*~-.<>{}#=$")
+_STRESS_KEYSYMBOLS = {
+    "*": 1,
+    "~": 2,
+    "-": 3,
+}
 
 @aligner
 class match_keysymbols_to_chars(AlignmentService, ABC):
     MAPPINGS = _KEYSYMBOL_TO_GRAPHEME_MAPPINGS
 
     @staticmethod
-    def process_input(transcription: str, translation: str) -> tuple[tuple[str, ...], str]:
-        phonetic_keysymbols = []
+    def process_input(transcription: str, translation: str) -> tuple[tuple[Keysymbol, ...], str]:
+        phonetic_keysymbols: list[Keysymbol] = []
+        next_stress = 0
         for keysymbol in transcription.split(" "):
             if len(keysymbol) == 0: continue
+
+            if keysymbol in _STRESS_KEYSYMBOLS:
+                next_stress = _STRESS_KEYSYMBOLS[keysymbol]
+
             if any(ch in keysymbol for ch in _NONPHONETIC_KEYSYMBOLS): continue
 
-            phonetic_keysymbols.append(re.sub(r"[\[\]\d]", "", keysymbol.lower()))
+            optional = keysymbol.startswith("[") and keysymbol.endswith("]")
+            phonetic_keysymbols.append(Keysymbol(re.sub(r"[\[\]]", "", keysymbol), re.sub(r"[\[\]\d]", "", keysymbol.lower()), next_stress, optional))
+
+            next_stress = 0
 
         return (tuple(phonetic_keysymbols), translation)
     
@@ -308,6 +343,10 @@ class match_keysymbols_to_chars(AlignmentService, ABC):
         )
     
     @staticmethod
+    def generate_candidate_x_key(candidate_subseq_x: tuple[Keysymbol, ...]) -> tuple[str, ...]:
+        return tuple(keysymbol.match_symbol for keysymbol in candidate_subseq_x)
+    
+    @staticmethod
     def is_match(actual_chars: str, candidate_chars: str):
         return actual_chars == candidate_chars
     
@@ -320,11 +359,11 @@ class match_keysymbols_to_chars(AlignmentService, ABC):
         )
     
     @staticmethod
-    def match_data(subseq_keysymbols: tuple[str, ...], subseq_chars: str, pre_subseq_keysymbols: tuple[str, ...], pre_subseq_chars: str):
+    def match_data(subseq_keysymbols: tuple[Keysymbol, ...], subseq_chars: str, pre_subseq_keysymbols: tuple[str, ...], pre_subseq_chars: str):
         return None
 
     @staticmethod
-    def construct_match(keysymbols: tuple[str, ...], translation: str, start_cell: Cell[_Cost, None], end_cell: Cell[_Cost, None], _: None):
+    def construct_match(keysymbols: tuple[Keysymbol, ...], translation: str, start_cell: Cell[_Cost, None], end_cell: Cell[_Cost, None], _: None):
         return Orthokeysymbol(
             keysymbols[start_cell.x:end_cell.x],
             translation[start_cell.y:end_cell.y],
@@ -380,7 +419,7 @@ class match_orthokeysymbols_to_chords(AlignmentService, ABC):
 
         for orthokeysymbol in candidate_subseq_x:
             for keysymbol in orthokeysymbol.keysymbols:
-                keysymbols.append(keysymbol)
+                keysymbols.append(keysymbol.match_symbol)
 
         if len(candidate_subseq_x) > 0 and len(candidate_subseq_x[-1].keysymbols) == 0:
             keysymbols.append("")

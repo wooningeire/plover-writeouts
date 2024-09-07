@@ -3,12 +3,12 @@ def test__match_sophemes__baseline():
 
     assert (
         " ".join(str(sopheme) for sopheme in match_sophemes("acquiesce", " { ~ a . k w ii . * e s } ", "A/KWEU/KWRES"))
-        == "a.a[A] cq.k[K] u.w[W] i.ii[EE] [[KWR]] e.e[E] sc.s[S] e."
+        == "a.a!2[A] cq.k[K] u.w[W] i.ii[EE] [[KWR]] e.e!1[E] sc.s[S] e."
     )
 
     assert (
         " ".join(str(sopheme) for sopheme in match_sophemes("zygote", " { z * ae . g ou t } ", "STKPWAOEU/TKPWOET"))
-        == "z.z[Z] y.ae[II] g.g[G] o.ou[OO] t.t[T] e."
+        == "z.z[Z] y.ae!1[II] g.g[G] o.ou[OO] t.t[T] e."
     )
 
 def test__match_sophemes__keysymbol_cluster_with_gap():
