@@ -6,10 +6,10 @@ from abc import ABC, abstractmethod
 from plover.steno import Stroke
 import plover.log
 
-from .Trie import ReadonlyTrie, Transition, TransitionCostInfo, Trie, NondeterministicTrie
-from .stenophoneme_util import split_consonant_phonemes
-from .util import can_add_stroke_on, split_stroke_parts
-from .config import (
+from ..util.Trie import ReadonlyTrie, Transition, TransitionCostInfo, Trie, NondeterministicTrie
+from ..stenophoneme.stenophoneme_util import split_consonant_phonemes
+from ..util.util import can_add_stroke_on, split_stroke_parts
+from ..theory.theory import (
     Stenophoneme,
     ALL_KEYS,
     LEFT_BANK_CONSONANTS_SUBSTROKE,

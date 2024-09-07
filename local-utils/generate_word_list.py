@@ -20,7 +20,7 @@ class _Affix:
 
 
 def _main():
-    from plover_writeouts.lib.match_sophemes import match_sophemes
+    from plover_writeouts.lib.alignment.match_sophemes import match_sophemes
 
     with open(Path(__file__).parent.parent / "local-utils/data/lapwing-base.json", "r", encoding="utf-8") as file:
         lapwing_dict = json.load(file)

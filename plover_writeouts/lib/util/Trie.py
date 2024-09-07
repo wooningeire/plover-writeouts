@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from plover.steno import Stroke
 import plover.log
 
-from .config import LINKER_CHORD, TRIE_LINKER_KEY, TRIE_STROKE_BOUNDARY_KEY
+from ..theory.theory import LINKER_CHORD, TRIE_LINKER_KEY, TRIE_STROKE_BOUNDARY_KEY
 from .util import can_add_stroke_on
 
 S = TypeVar("S")

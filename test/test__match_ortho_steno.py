@@ -1,5 +1,5 @@
 def test__match_graphemes_to_writeout_chords__baseline():
-    from plover_writeouts.lib.match_chars import match_chars_to_chords
+    from plover_writeouts.lib.alignment.match_ortho_steno import match_chars_to_chords
 
     assert (
         str(match_chars_to_chords("emilio", "E/PHEU/HREU/KWROE"))
@@ -7,7 +7,7 @@ def test__match_graphemes_to_writeout_chords__baseline():
     )
 
 def test__match_graphemes_to_writeout_chords__silent_letters():
-    from plover_writeouts.lib.match_chars import match_chars_to_chords
+    from plover_writeouts.lib.alignment.match_ortho_steno import match_chars_to_chords
 
     assert (
         str(match_chars_to_chords("pinecone", "PAOEUPB/KO*EPB"))
@@ -15,7 +15,7 @@ def test__match_graphemes_to_writeout_chords__silent_letters():
     )
 
 def test__match_graphemes_to_writeout_chords__silent_chords():
-    from plover_writeouts.lib.match_chars import match_chars_to_chords
+    from plover_writeouts.lib.alignment.match_ortho_steno import match_chars_to_chords
 
     assert (
         str(match_chars_to_chords("pupal", "PAOUP/KWRAL"))
@@ -23,7 +23,7 @@ def test__match_graphemes_to_writeout_chords__silent_chords():
     )
 
 def test__match_graphemes_to_writeout_chords__asterisk_chords():
-    from plover_writeouts.lib.match_chars import match_chars_to_chords
+    from plover_writeouts.lib.alignment.match_ortho_steno import match_chars_to_chords
 
     assert (
         str(match_chars_to_chords("zenith", "STKPWE/TPH*EUT"))
@@ -31,7 +31,7 @@ def test__match_graphemes_to_writeout_chords__asterisk_chords():
     )
 
 def test__match_graphemes_to_writeout_chords__length_stress_test():
-    from plover_writeouts.lib.match_chars import match_chars_to_chords
+    from plover_writeouts.lib.alignment.match_ortho_steno import match_chars_to_chords
 
     assert (
         str(match_chars_to_chords("supercalifragilisticexpialidocious", "SAOU/PER/KA/HREU/TPRA/SKWREU/HREU/STEUS/KWREBGS/PEU/KWRA/HREU/TKOERB/KWRUS"))

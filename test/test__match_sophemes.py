@@ -1,5 +1,5 @@
 def test__match_sophemes__baseline():
-    from plover_writeouts.lib.match_sophemes import match_sophemes
+    from plover_writeouts.lib.alignment.match_sophemes import match_sophemes
 
     assert (
         " ".join(str(sopheme) for sopheme in match_sophemes("acquiesce", " { ~ a . k w ii . * e s } ", "A/KWEU/KWRES"))
@@ -12,7 +12,7 @@ def test__match_sophemes__baseline():
     )
 
 def test__match_sophemes__keysymbol_cluster_with_gap():
-    from plover_writeouts.lib.match_sophemes import match_sophemes
+    from plover_writeouts.lib.alignment.match_sophemes import match_sophemes
 
     assert (
         " ".join(str(sopheme) for sopheme in match_sophemes("ation", " { ee sh n } ", "AEUGS"))
@@ -20,7 +20,7 @@ def test__match_sophemes__keysymbol_cluster_with_gap():
     )
 
 def test__match_sophemes__shortest_forms():
-    from plover_writeouts.lib.match_sophemes import match_sophemes
+    from plover_writeouts.lib.alignment.match_sophemes import match_sophemes
 
     assert (
         " ".join(sopheme.shortest_form() for sopheme in match_sophemes("yet", " { y * e t } ", "KWHET"))

@@ -1,6 +1,6 @@
 from plover.steno import Stroke
 
-from .config import (
+from ..theory.theory import (
     ASTERISK_SUBSTROKE,
     LEFT_BANK_CONSONANTS_SUBSTROKE,
     RIGHT_BANK_CONSONANTS_SUBSTROKE,

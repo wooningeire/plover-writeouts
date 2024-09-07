@@ -2,8 +2,6 @@ from dataclasses import dataclass
 from typing import Generator, cast, NamedTuple
 from abc import ABC
 
-from plover_writeouts.lib.alignment import Sliceable
-
 from .steno_annotations import AsteriskableKey, AnnotatedChord
 
 from .alignment import AlignmentService, Cell, aligner

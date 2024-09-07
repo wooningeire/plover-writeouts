@@ -1,8 +1,8 @@
 from dataclasses import dataclass
-from typing import Generator, Generic, TypeVar, Sequence, Mapping, Protocol, Iterable
-from abc import ABC, abstractmethod
+from typing import Generator, Generic, TypeVar, Mapping, Protocol, Iterable
+from abc import ABC
 
-from .Trie import Trie
+from ..util.Trie import Trie
 
 _Item = TypeVar("_Item")
 

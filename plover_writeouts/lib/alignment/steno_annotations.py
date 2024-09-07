@@ -3,9 +3,9 @@ from typing import Generic, TypeVar, Iterable
 
 from plover.steno import Stroke
 
-from .Stenophoneme import Stenophoneme
-from .util import can_add_stroke_on
-from .config import ASTERISK_SUBSTROKE
+from ..stenophoneme.Stenophoneme import Stenophoneme
+from ..util.util import can_add_stroke_on
+from ..theory.theory import ASTERISK_SUBSTROKE
 
 @dataclass(frozen=True)
 class AsteriskableKey:

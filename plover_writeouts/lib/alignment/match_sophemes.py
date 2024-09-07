@@ -6,9 +6,7 @@ import re
 
 from plover.steno import Stroke
 
-from plover_writeouts.lib.alignment import Sliceable
-
-from .Stenophoneme import Stenophoneme
+from ..stenophoneme.Stenophoneme import Stenophoneme
 from .steno_annotations import AsteriskableKey, AnnotatedChord
 from .alignment import AlignmentService, Cell, aligner
 

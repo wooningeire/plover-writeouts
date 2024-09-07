@@ -2,8 +2,9 @@ from typing import Optional
 
 from plover.steno import Stroke
 
-from .Trie import Trie
-from .config import Stenophoneme, PHONEMES_TO_CHORDS_LEFT, PHONEMES_TO_CHORDS_RIGHT
+from ..util.Trie import Trie
+from ..theory.theory import PHONEMES_TO_CHORDS_LEFT, PHONEMES_TO_CHORDS_RIGHT
+from ..stenophoneme.Stenophoneme import Stenophoneme
 
 _CONSONANT_CHORDS: dict[Stroke, tuple[Stenophoneme, ...]] = {
     **{

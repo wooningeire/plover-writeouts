@@ -2,7 +2,7 @@ from typing import Optional
 
 from plover.steno import Stroke
 
-from .Stenophoneme import Stenophoneme
+from ..stenophoneme.Stenophoneme import Stenophoneme
 
 
 ALL_KEYS = Stroke.from_steno("STKPWHRAO*EUFRPBLGTSDZ")
