@@ -18,3 +18,11 @@ def test__match_sophemes__keysymbol_cluster_with_gap():
         " ".join(str(sopheme) for sopheme in match_sophemes("ation", " { ee sh n } ", "AEUGS"))
         == "a.ee[AA] (ti.sh o. n.n)[[-GS]]"
     )
+
+def test__match_sophemes__shortest_forms():
+    from plover_writeouts.lib.match_sophemes import match_sophemes
+
+    assert (
+        " ".join(sopheme.shortest_form() for sopheme in match_sophemes("yet", " { y * e t } ", "KWHET"))
+        == "y e.e!1[E] t"
+    )

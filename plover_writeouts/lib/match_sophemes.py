@@ -19,8 +19,8 @@ _KEYSYMBOL_TO_GRAPHEME_MAPPINGS = {
         "t": ("t", "tt", "d", "dd"),
         "?": (),  # glottal stop
         "t^": ("r", "rr"),  # tapped R
-        "k": ("k", "c", "ck", "cc", "q", "cq"),
-        "x": ("k", "c", "ck", "cc"),
+        "k": ("k", "kk", "c", "ck", "cc", "q", "cq"),
+        "x": ("k", "kk", "c", "ck", "cc", "q", "cq"),
         "b": ("b", "bb"),
         "d": ("d", "dd", "t", "tt"),
         "g": ("g", "gg"),
@@ -28,8 +28,8 @@ _KEYSYMBOL_TO_GRAPHEME_MAPPINGS = {
         "jh": ("j", "g"),
         "s": ("s", "ss", "c", "sc", "z", "zz"),
         "z": ("z", "zz", "s", "ss", "x"),
-        "sh": ("sh", "ti", "ci", "si"),
-        "zh": ("sh", "zh", "j", "g", "si", "ti", "ci"),
+        "sh": ("sh", "ti", "ci", "si", "ssi"),
+        "zh": ("sh", "zh", "j", "g", "si", "ssi", "ti", "ci"),
         "f": ("f", "ph", "ff", "v", "vv"),
         "v": ("v", "vv", "f", "ff", "ph"),
         "th": ("th",),
@@ -211,7 +211,7 @@ _KEYSYMBOL_TO_STENO_MAPPINGS = {
         "a": (*_mappings(Stenophoneme.A), *_mappings(Stenophoneme.AA)),
         "ah": (*_mappings(Stenophoneme.A), *_mappings(Stenophoneme.O)),
         "oa": (*_mappings(Stenophoneme.A), *_mappings(Stenophoneme.O), *_mappings(Stenophoneme.U)),
-        "aa": _mappings(Stenophoneme.O),
+        "aa": (*_mappings(Stenophoneme.O), *_mappings(Stenophoneme.A)),
         "ar": _mappings(Stenophoneme.A),
         "eh": _mappings(Stenophoneme.A),
         "ou": _mappings(Stenophoneme.OO),
@@ -390,6 +390,47 @@ class Sopheme:
     
     __repr__ = __str__
 
+    def shortest_form(self):
+        key = (
+            tuple(
+                (
+                    tuple(keysymbol.symbol for keysymbol in orthokeysymbol.keysymbols),
+                    orthokeysymbol.chars,
+                )
+                for orthokeysymbol in self.orthokeysymbols
+            ),
+            self.phoneme,
+        )
+
+        return _sopheme_shorthands.get(key, str(self))
+
+_sopheme_shorthands = {
+    ((((keysymbols), ortho),), phoneme): ortho
+    for (phoneme, keysymbols), orthos in {
+        (Stenophoneme.P, ("p",)): ("p", "pp"),
+        (Stenophoneme.T, ("t",)): ("t", "tt"),
+        (Stenophoneme.K, ("k",)): ("k", "kk", "ck", "q"),
+        (Stenophoneme.B, ("b",)): ("b", "bb"),
+        (Stenophoneme.D, ("d",)): ("d", "dd"),
+        (Stenophoneme.G, ("g",)): ("g", "gg"),
+        (Stenophoneme.CH, ("ch",)): ("ch",),
+        (Stenophoneme.J, ("jh",)): ("j",),
+        (Stenophoneme.S, ("s",)): ("s", "ss"),
+        (Stenophoneme.Z, ("z",)): ("z", "zz"),
+        (Stenophoneme.SH, ("sh",)): ("sh", "ti", "ci", "si", "ssi"),
+        (Stenophoneme.F, ("f",)): ("f", "ff", "ph"),
+        (Stenophoneme.V, ("v",)): ("v", "vv"),
+        (Stenophoneme.H, ("h",)): ("h",),
+        (Stenophoneme.M, ("m",)): ("m", "mm"),
+        (Stenophoneme.N, ("n",)): ("n", "nn"),
+        (Stenophoneme.L, ("l",)): ("l", "ll"),
+        (Stenophoneme.R, ("r",)): ("r", "rr"),
+        (Stenophoneme.Y, ("y",)): ("y",),
+        (Stenophoneme.W, ("w",)): ("w",),
+    }.items()
+    for ortho in orthos
+}
+
 @aligner
 class match_orthokeysymbols_to_chords(AlignmentService, ABC):
     MAPPINGS = _KEYSYMBOL_TO_STENO_MAPPINGS
@@ -467,6 +508,6 @@ class match_orthokeysymbols_to_chords(AlignmentService, ABC):
             match_data[1] if match_data is not None else None,
         )
     
-def match_sophemes(translation: str, transcription: str, outline_steno: str):
+def match_sophemes(translation: str, transcription: str, outline_steno: str) -> tuple[Sopheme, ...]:
     orthokeysymbols = match_keysymbols_to_chars(transcription, translation)
     return match_orthokeysymbols_to_chords(orthokeysymbols, outline_steno)

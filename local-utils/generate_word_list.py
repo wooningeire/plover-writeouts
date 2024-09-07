@@ -1,5 +1,7 @@
 from pathlib import Path
 import json
+import re
+from dataclasses import dataclass
 import timeit
     
 from plover import system
@@ -11,18 +13,24 @@ def _setup_plover():
     registry.update()
     system.setup(DEFAULT_SYSTEM_NAME)
 
+@dataclass(frozen=True)
+class _Affix:
+    text: str
+    is_prefix: bool
+
+
 def _main():
     from plover_writeouts.lib.match_sophemes import match_sophemes
 
     with open(Path(__file__).parent.parent / "local-utils/data/lapwing-base.json", "r", encoding="utf-8") as file:
         lapwing_dict = json.load(file)
     
-    # lapwing_affixes_dict: dict[str, set[str]] = {}
+    # reverse_lapwing_affixes_dict: dict[str, set[str]] = {}
     reverse_lapwing_dict: dict[str, list[str]] = {}
     for outline_steno, translation in lapwing_dict.items():
         # if "{^" in translation or "^}" in translation:
         #     if translation in reverse_lapwing_affixes_dict:
-        #         reverse_lapwing_affixes_dict[translation].add(outline_steno) 
+        #         reverse_lapwing_affixes_dict[_Affix(re.sub(translation, ))].add(outline_steno) 
 
         #     continue
 
