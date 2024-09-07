@@ -2,6 +2,8 @@ from dataclasses import dataclass
 from typing import Generator, cast, NamedTuple
 from abc import ABC
 
+from plover_writeouts.lib.alignment import Sliceable
+
 from .steno_annotations import AsteriskableKey, AnnotatedChord
 
 from .alignment import AlignmentService, Cell, aligner
@@ -108,8 +110,12 @@ class _Cost(NamedTuple):
     
 
 @aligner
-class _match_chars_to_keys(AlignmentService, ABC):
+class match_chars_to_chords(AlignmentService, ABC):
     MAPPINGS = _GRAPHEME_TO_STENO_MAPPINGS
+
+    @staticmethod
+    def process_input(translation: str, outline_steno: str) -> tuple[str, tuple[AsteriskableKey, ...]]:
+        return (translation, AsteriskableKey.annotations_from_outline(outline_steno))
     
     @staticmethod
     def initial_cost():
@@ -151,6 +157,3 @@ class _match_chars_to_keys(AlignmentService, ABC):
             data=translation[start_cell.x:end_cell.x],
             chord=AnnotatedChord.keys_to_strokes((key.key for key in keys[start_cell.y:end_cell.y]), asterisk_matches or (False,) * (end_cell.y - start_cell.y)),
         )
-
-def match_chars_to_writeout_chords(translation: str, outline_steno: str):
-    return _match_chars_to_keys(translation, AsteriskableKey.annotations_from_outline(outline_steno))

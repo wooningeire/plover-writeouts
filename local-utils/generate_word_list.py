@@ -12,30 +12,7 @@ def _setup_plover():
     system.setup(DEFAULT_SYSTEM_NAME)
 
 def _main():
-    from plover_writeouts.lib.match_keysymbols import match_keysymbols_to_writeout_chords
-    from plover_writeouts.lib.match_stenophonemes import match_chars_to_phonos
-    from plover_writeouts.lib.match_chars import match_chars_to_writeout_chords
     from plover_writeouts.lib.match_sophemes import match_sophemes
-
-    # transcription = "~ a . k w ii . * e s"
-    # outline_steno = "A/KWEU/KWRES"
-
-
-    # # phonos = match_keysymbols_to_writeout_chords(phonetic_keysymbols, outline_steno)
-    # # sophemes = match_chars_to_phonos("aquiesce", phonos)
-
-
-    # # print(phonos)
-    # # print(sophemes)
-
-    # print(match_chars_to_writeout_chords("aquiesce", outline_steno))
-    # # orthokeysymbols = match_transcription_to_chars(transcription, "acquiesce")
-    # # print(match_orthokeysymbols_to_chords(orthokeysymbols, outline_steno))
-
-    # print(match_sophemes("acquiesce", "~ a . k w ii . * e s", "A/KWEU/KWRES"))
-
-
-    # return
 
     with open(Path(__file__).parent.parent / "local-utils/data/lapwing-base.json", "r", encoding="utf-8") as file:
         lapwing_dict = json.load(file)

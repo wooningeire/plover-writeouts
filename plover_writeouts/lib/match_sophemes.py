@@ -1,9 +1,12 @@
 from dataclasses import dataclass
 from abc import ABC
-from typing import Generator, NamedTuple, cast
+from typing import NamedTuple, cast
 from itertools import cycle
+import re
 
 from plover.steno import Stroke
+
+from plover_writeouts.lib.alignment import Sliceable
 
 from .Stenophoneme import Stenophoneme
 from .steno_annotations import AsteriskableKey, AnnotatedChord
@@ -13,18 +16,18 @@ _KEYSYMBOL_TO_GRAPHEME_MAPPINGS = {
     tuple(keysymbol.split(" ")): graphemes
     for keysymbol, graphemes in {
         "p": ("p", "pp"),
-        "t": ("t", "tt"),
+        "t": ("t", "tt", "d", "dd"),
         "?": (),  # glottal stop
         "t^": ("r", "rr"),  # tapped R
         "k": ("k", "c", "ck", "cc", "q", "cq"),
         "x": ("k", "c", "ck", "cc"),
         "b": ("b", "bb"),
-        "d": ("d", "dd"),
+        "d": ("d", "dd", "t", "tt"),
         "g": ("g", "gg"),
-        "ch": ("ch", "t"),
+        "ch": ("ch", "t", "tt"),
         "jh": ("j", "g"),
-        "s": ("s", "c", "sc"),
-        "z": ("z", "s"),
+        "s": ("s", "ss", "c", "sc"),
+        "z": ("z", "zz", "s", "ss"),
         "sh": ("sh", "ti", "ci", "si"),
         "zh": ("sh", "zh", "j", "g", "si", "ti", "ci"),
         "f": ("f", "ph", "ff"),
@@ -63,7 +66,7 @@ _KEYSYMBOL_TO_GRAPHEME_MAPPINGS = {
         "or": ("o", "a", "ou", "au", "ow", "aw"),
         "our": ("o", "a", "ou", "au", "ow", "aw"),
         "ii": ("e", "i", "ee", "ea", "ie", "ei"),
-        "iy": ("i", "y", "ey", "ei"),
+        "iy": ("i", "y", "ey", "ei", "ie"),
         "i": ("i", "y"),
         "@r": ("a", "o", "e", "u", "i", "y", "au", "ou"),
         "@": ("a", "o", "e", "u", "i", "y", "au", "ou"),
@@ -93,108 +96,6 @@ _KEYSYMBOL_TO_GRAPHEME_MAPPINGS = {
         "k s": ("x",),
     }.items()
 }
-
-
-_STENO_CLUSTER_TO_KEYSYMBOL_MAPPINGS = {
-    "sh n": "-GS",
-    "k sh n": "-BGS",
-    "k s": "KP",
-    
-
-}
-
-# _GRAPHEME_TO_STENOPHONEME_MAPPINGS = {
-#     grapheme: sorted(
-#         tuple(AsteriskableKey.annotations_from_outline(outline_steno) for outline_steno in outline_stenos),
-#         key=lambda keys: len(keys), reverse=True
-#     )
-#     for grapheme, outline_stenos in cast(dict[str, tuple[str, ...]], {
-#         # Does not need to be fully complete to be effective
-
-#         "": ((None, "KWR"), (None, "W")),
-
-#         "a": ("A", "AEU", "AU"),
-#         "b": _mappings(Stenophoneme.B),
-#         "c": (*_mappings(Stenophoneme.S), *_mappings(Stenophoneme.K), *_mappings(Stenophoneme.SH), *_mappings(Stenophoneme.CH), (Stenophoneme.S, "KR"),),
-#         "d": _mappings(Stenophoneme.D),
-#         "e": ("E", "AOE", "AEU", "E/KWR", "AOE/KWR", "AEU/KWR"),
-#         "f": _mappings(Stenophoneme.F),
-#         "g": (*_mappings(Stenophoneme.G), *_mappings(Stenophoneme.J)),
-#         "h": _mappings(Stenophoneme.H),
-#         "i": ("EU", "AOEU", "EU/KWR", "AOEU/KWR"),
-#         "j": ("SKWR", "-PBLG", "-G"),
-#         "k": ("K", "-BG", "*G"),
-#         "l": ("HR", "-L"),
-#         "m": ("PH", "-PL"),
-#         "n": ("TPH", "-PB"),
-#         "o": ("O", "OE", "O/W", "OE/W"),
-#         "p": ("P", "-P"),
-#         "q": ("K", "-BG"),
-#         "r": ("R", "-R"),
-#         "s": ("S", "-S", "-F", "-Z", "SH", "-RB"),
-#         "t": ("T", "-T", "SH", "-RB", "KH", "-FP"),
-#         "u": ("U", "W", "AOU", "U/W", "AOU/W", "KWRU", "KWRAOU", "KWRU/W", "KWRAOU/W"),
-#         "v": ("SR", "-F"),
-#         "w": ("W", "U"),
-#         "x": ("KP", "-BGS", "-BG/S"),
-#         "y": ("KWH", "EU", "AOEU", "EU/KWR", "AOEU/KWR"),
-#         "z": ("STKPW", "-Z", "-F"),
-
-#         "th": ("TH", "*T"),
-#         "sh": ("SH", "-RB"),
-#         "ch": ("KH", "-FP"),
-
-#         "aa": ("A", "AU"),
-#         "ee": ("AOE",),
-#         "ii": ("AOE", "EU"),
-#         "oo": ("AO",),
-#         "ou": ("U",),
-#         "ea": ("AOE", "AE"),
-#         "ae": ("AE", "AEU"),
-#         "ai": ("AEU", "AOEU"),
-#         "ay": ("AEU", "AOEU"),
-#         "au": ("AU",),
-#         "aw": ("AU",),
-#         "oi": ("OEU",),
-#         "oy": ("OEU",),
-#         "ou": ("OU",),
-#         "ow": ("OU",),
-#         "ei": ("AOE", "E"),
-#         "ey": ("AOE", "E"),
-#         "ie": ("AOE", "E"),
-
-#         "dg": ("SKWR", "-PBLG"),
-#         "ck": ("K", "-BG"),
-#         "ti": ("SH", "-RB", "-RB/KWR"),
-#         "ci": ("SH", "-RB", "-RB/KWR"),
-#         "mp": ("*PL",),
-#         "sc": _mappings(Stenophoneme.S),
-
-#         "bb": ("PW", "-B"),
-#         "cc": ("S", "K", "KR", "-BG", "-S"),
-#         "dd": ("TK", "-D"),
-#         "ff": ("TP", "-F"),
-#         "gg": ("SKWR", "TKPW", "-PBLG", "-G"),
-#         "jj": ("SKWR", "-PBLG", "-G"),
-#         "kk": ("K", "-BG", "*G"),
-#         "ll": ("HR", "-L"),
-#         "mm": ("PH", "-PL"),
-#         "nn": ("TPH", "-PB"),
-#         "pp": ("P", "-P"),
-#         "rr": ("R", "-R"),
-#         "ss": ("S", "-S", "-F", "-Z", "SH", "-RB"),
-#         "tt": ("T", "-T"),
-#         "vv": ("SR", "-F"),
-#         "xx": ("KP", "-BGS", "-BG/S"),
-#         "zz": ("STKPW", "-Z", "-F"),
-
-#         "tion": ("-GS",),
-#         "cian": ("-GS",),
-#         "ction": ("-BGS",),
-#         "nction": ("-PBGS",),
-#     }).items()
-# }
-# """A list of what counts as a "match" when matching characters to keys."""
 
 
 _PHONEME_TO_STENO_MAPPINGS = {
@@ -244,7 +145,7 @@ class _Mapping:
 
 _mappings = lambda phoneme: tuple(zip(cycle((phoneme,)), _PHONEME_TO_STENO_MAPPINGS[phoneme]))
 _vowels = lambda *phonemes: tuple(zip(phonemes, phonemes))
-_no_phoneme = lambda stenos: tuple(zip(cycle((None,)), stenos))
+_no_phoneme = lambda *stenos: tuple(zip(cycle((None,)), stenos))
 
 _any_vowel_mapping = (
     (Stenophoneme.A, "A"),
@@ -265,12 +166,8 @@ _any_vowel_mapping = (
 )
 
 _KEYSYMBOL_TO_STENO_MAPPINGS = {
-    tuple(keysymbol.split(" ")): sorted(
-        tuple(_Mapping(phoneme, AsteriskableKey.annotations_from_outline(outline_steno)) for phoneme, outline_steno in mapping),
-        key=lambda mapping: len(mapping.keys),
-        reverse=True,
-    )
-    for keysymbol, mapping in cast(dict[str, tuple[tuple[Stenophoneme | str, str], ...]], {
+    tuple(keysymbol.split(" ")): tuple(_Mapping(phoneme, AsteriskableKey.annotations_from_outline(outline_steno)) for phoneme, outline_steno in mapping)
+    for keysymbol, mapping in cast(dict[str, tuple[tuple[Stenophoneme | str | None, str], ...]], {
         # How does each keysymbol appear as it does in Lapwing?
 
         "p": _mappings(Stenophoneme.P),
@@ -310,7 +207,7 @@ _KEYSYMBOL_TO_STENO_MAPPINGS = {
         "e": (*_mappings(Stenophoneme.E), *_mappings(Stenophoneme.EE), *_mappings(Stenophoneme.AA)),
         "ao": (*_mappings(Stenophoneme.A), *_mappings(Stenophoneme.AA), *_mappings(Stenophoneme.O), *_mappings(Stenophoneme.U)),
         "a": (*_mappings(Stenophoneme.A), *_mappings(Stenophoneme.AA)),
-        "ah": _mappings(Stenophoneme.O),
+        "ah": (*_mappings(Stenophoneme.A), *_mappings(Stenophoneme.O)),
         "oa": (*_mappings(Stenophoneme.A), *_mappings(Stenophoneme.O), *_mappings(Stenophoneme.U)),
         "aa": _mappings(Stenophoneme.O),
         "ar": _mappings(Stenophoneme.A),
@@ -332,8 +229,8 @@ _KEYSYMBOL_TO_STENO_MAPPINGS = {
         "u": (*_mappings(Stenophoneme.U), *_mappings(Stenophoneme.O), *_mappings(Stenophoneme.OO)),
         "uu": _mappings(Stenophoneme.UU),
         "iu": _mappings(Stenophoneme.UU),
-        "ei": (*_mappings(Stenophoneme.E), *_mappings(Stenophoneme.AA)),
-        "ee": (*_mappings(Stenophoneme.E), *_mappings(Stenophoneme.AA), *_mappings(Stenophoneme.A)),
+        "ei": (*_mappings(Stenophoneme.AA), *_mappings(Stenophoneme.E)),
+        "ee": (*_mappings(Stenophoneme.AA), *_mappings(Stenophoneme.E), *_mappings(Stenophoneme.A)),
         "ai": _mappings(Stenophoneme.II),
         "ae": _mappings(Stenophoneme.II),
         "aer": _mappings(Stenophoneme.II),
@@ -350,12 +247,13 @@ _KEYSYMBOL_TO_STENO_MAPPINGS = {
         "ur": (*_mappings(Stenophoneme.U), *_mappings(Stenophoneme.UU)),
         "i@": _vowels("KWRA", "KWRO", "KWRE", "KWRU", "KWREU", "KWHA", "KWHO", "KWHE", "KWHU", "KWHEU"),
         
-        "k s": _no_phoneme("KP",),
-        "sh n": _no_phoneme("-GS",),
-        "zh n": _no_phoneme("-GS",),
-        "k sh n": _no_phoneme("-BGS",),
-        "k zh n": _no_phoneme("-BGS",),
+        "k s": _no_phoneme("KP"),
+        "sh n": _no_phoneme("-GS"),
+        "zh n": _no_phoneme("-GS"),
+        "k sh n": _no_phoneme("-BGS"),
+        "k zh n": _no_phoneme("-BGS"),
         "m p": _no_phoneme("*PL"),
+        "y uu": _mappings(Stenophoneme.UU),
     }).items()
 }
 
@@ -379,9 +277,23 @@ class Orthokeysymbol:
     __repr__ = __str__
 
 
+
+_NONPHONETIC_KEYSYMBOLS = tuple("*~-.<>{}#=$")
+
 @aligner
-class _match_chars_to_keysymbols(AlignmentService, ABC):
+class match_keysymbols_to_chars(AlignmentService, ABC):
     MAPPINGS = _KEYSYMBOL_TO_GRAPHEME_MAPPINGS
+
+    @staticmethod
+    def process_input(transcription: str, translation: str) -> tuple[tuple[str, ...], str]:
+        phonetic_keysymbols = []
+        for keysymbol in transcription.split(" "):
+            if len(keysymbol) == 0: continue
+            if any(ch in keysymbol for ch in _NONPHONETIC_KEYSYMBOLS): continue
+
+            phonetic_keysymbols.append(re.sub(r"[\[\]\d]", "", keysymbol.lower()))
+
+        return (tuple(phonetic_keysymbols), translation)
     
     @staticmethod
     def initial_cost():
@@ -419,19 +331,6 @@ class _match_chars_to_keysymbols(AlignmentService, ABC):
         )
 
 
-_NONPHONETIC_KEYSYMBOLS = tuple("*~-.<>{}#=$")
-
-def match_transcription_to_chars(transcription: str, translation: str):
-    phonetic_keysymbols = []
-    for keysymbol in transcription.split(" "):
-        if len(keysymbol) == 0: continue
-        if any(ch in keysymbol for ch in _NONPHONETIC_KEYSYMBOLS): continue
-
-        phonetic_keysymbols.append(keysymbol.replace("[", "").replace("]", ""))
-    return _match_chars_to_keysymbols(tuple(phonetic_keysymbols), translation)
-
-
-
 @dataclass(frozen=True)
 class Sopheme:
     orthokeysymbols: tuple[Orthokeysymbol, ...]
@@ -440,7 +339,7 @@ class Sopheme:
 
     def __str__(self):
         out = " ".join(str(orthokeysymbol) for orthokeysymbol in self.orthokeysymbols)
-        if len(self.orthokeysymbols) > 1 and self.phoneme is not None:
+        if len(self.orthokeysymbols) > 1 and (self.phoneme is not None or len(self.steno) > 0):
             out = f"({out})"
 
         if self.phoneme is not None:
@@ -453,8 +352,12 @@ class Sopheme:
     __repr__ = __str__
 
 @aligner
-class _match_orthokeysymbols_to_keys(AlignmentService, ABC):
+class match_orthokeysymbols_to_chords(AlignmentService, ABC):
     MAPPINGS = _KEYSYMBOL_TO_STENO_MAPPINGS
+
+    @staticmethod
+    def process_input(orthokeysymbols: tuple[Orthokeysymbol, ...], outline_steno: str) -> tuple[tuple[Orthokeysymbol, ...], tuple[AsteriskableKey, ...]]:
+        return (orthokeysymbols, AsteriskableKey.annotations_from_outline(outline_steno))
     
     @staticmethod
     def initial_cost():
@@ -524,11 +427,7 @@ class _match_orthokeysymbols_to_keys(AlignmentService, ABC):
             AnnotatedChord.keys_to_strokes((key.key for key in keys[start_cell.y:end_cell.y]), match_data[0] if match_data is not None else (False,) * (end_cell.y - start_cell.y)),
             match_data[1] if match_data is not None else None,
         )
-
-def match_orthokeysymbols_to_chords(orthokeysymbols: tuple[Orthokeysymbol, ...], outline_steno: str):
-    return _match_orthokeysymbols_to_keys(orthokeysymbols, AsteriskableKey.annotations_from_outline(outline_steno))
-
-
+    
 def match_sophemes(translation: str, transcription: str, outline_steno: str):
-    orthokeysymbols = match_transcription_to_chars(transcription, translation)
+    orthokeysymbols = match_keysymbols_to_chars(transcription, translation)
     return match_orthokeysymbols_to_chords(orthokeysymbols, outline_steno)

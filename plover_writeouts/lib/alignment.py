@@ -2,6 +2,8 @@ from dataclasses import dataclass
 from typing import Generator, Generic, TypeVar, Sequence, Mapping, Protocol, Iterable
 from abc import ABC, abstractmethod
 
+from .Trie import Trie
+
 _Item = TypeVar("_Item")
 
 class Sliceable(Protocol[_Item]):
@@ -16,6 +18,10 @@ class Sliceable(Protocol[_Item]):
 
 Cost = TypeVar("Cost")
 MatchData = TypeVar("MatchData")
+InputX = TypeVar("InputX")
+InputY = TypeVar("InputY")
+MappingX = TypeVar("MappingX", bound=Sliceable)
+MappingY = TypeVar("MappingY", bound=Sliceable)
 ItemX = TypeVar("ItemX", bound=Sliceable)
 ItemY = TypeVar("ItemY", bound=Sliceable)
 Match = TypeVar("Match")
@@ -47,8 +53,12 @@ class Cell(Generic[Cost, MatchData]):
     def __gt__(self, cell: "Cell"):
         return self.cost > cell.cost
 
-class AlignmentService[Cost, MatchData, ItemX, ItemY, Match](ABC):
-    MAPPINGS: Mapping[Sliceable[ItemX], Sequence[Sliceable[ItemY]]]
+class AlignmentService[Cost, MatchData, InputX, InputY, MappingX, MappingY, ItemX, ItemY, Match](ABC):
+    MAPPINGS: Mapping[MappingX, MappingY]
+
+    @staticmethod
+    def process_input(x_input: InputX, y_input: InputY) -> tuple[Sliceable[ItemX], Sliceable[ItemY]]:
+        return (x_input, y_input)
 
     @staticmethod
     def initial_cost() -> Cost:
@@ -59,11 +69,11 @@ class AlignmentService[Cost, MatchData, ItemX, ItemY, Match](ABC):
         ...
 
     @staticmethod
-    def generate_candidate_x_key(candidate_subseq_x: Sliceable[ItemX]) -> Sliceable[ItemX]:
+    def generate_candidate_x_key(candidate_subseq_x: MappingX) -> Sliceable[ItemX]:
         return candidate_subseq_x
     
     @staticmethod
-    def generate_candidate_y_key(candidate_subseq_y: Sliceable[ItemY]) -> Sliceable[ItemY]:
+    def generate_candidate_y_key(candidate_subseq_y: MappingY) -> Sliceable[ItemY]:
         return candidate_subseq_y
     
     @staticmethod
@@ -87,8 +97,8 @@ class AlignmentService[Cost, MatchData, ItemX, ItemY, Match](ABC):
         ...
 
 
-def aligner(Service: type[AlignmentService[Cost, MatchData, Sliceable[ItemX], Sliceable[ItemY], Match]]):
-    def align(seq_x: Sliceable[ItemX], seq_y: Sliceable[ItemY]):
+def aligner(Service: type[AlignmentService[Cost, MatchData, InputX, InputY, MappingX, MappingY, ItemX, ItemY, Match]]):
+    def align(input_x: InputX, input_y: InputY):
         """Generates an alignment between characters in a translation and keys in a Lapwing-style outline.
         
         Uses a variation of the Needleman–Wunsch algorithm.
@@ -98,6 +108,8 @@ def aligner(Service: type[AlignmentService[Cost, MatchData, Sliceable[ItemX], Sl
         """
 
         mappings = Service.MAPPINGS
+
+        seq_x, seq_y = Service.process_input(input_x, input_y)
 
         def create_mismatch_cell(x: int, y: int, increment_x: bool, increment_y: bool):
             mismatch_parent = matrix[x if increment_x else x + 1][y if increment_y else y + 1]
