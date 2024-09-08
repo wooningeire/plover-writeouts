@@ -18,7 +18,7 @@ class HatcheryDictionary(StenoDictionary):
         self.__maybe_lookup: Optional[Callable[[tuple[str, ...]], Optional[str]]] = None
 
     def _load(self, filepath: str):
-        from .lib.lookup.build_lookup import build_lookup_hatchery
+        from .lib.lookup import build_lookup_hatchery
 
         with open(filepath, "r", encoding="utf-8") as file:
             self.__maybe_lookup = build_lookup_hatchery(file)

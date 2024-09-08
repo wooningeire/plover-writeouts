@@ -18,12 +18,12 @@ class WriteoutsDictionary(StenoDictionary):
         self.__maybe_lookup: Optional[Callable[[tuple[str, ...]], Optional[str]]] = None
 
     def _load(self, filepath: str):
-        from .lib.lookup.build_lookup import build_lookup
+        from .lib.lookup import build_lookup_json
 
         with open(filepath, "r", encoding="utf-8") as file:
             map: dict[str, str] = json.load(file)
 
-        self.__maybe_lookup = build_lookup(map)
+        self.__maybe_lookup = build_lookup_json(map)
 
 
     def __getitem__(self, stroke_stenos: tuple[str, ...]) -> str:
