@@ -7,6 +7,7 @@ import re
 from plover.steno import Stroke
 
 from ..stenophoneme.Stenophoneme import Stenophoneme
+from ..sopheme.Sopheme import Sopheme, Orthokeysymbol, Keysymbol
 from .steno_annotations import AsteriskableKey, AnnotatedChord
 from .alignment import AlignmentService, Cell, aligner
 
@@ -264,40 +265,6 @@ class _Cost(NamedTuple):
     n_chunks: int
 
 
-@dataclass(frozen=True)
-class Keysymbol:
-    symbol: str
-    match_symbol: str
-    stress: int
-    optional: bool
-
-    def __str__(self):
-        out = self.symbol
-        if self.stress > 0:
-            out += f"!{self.stress}"
-        if self.optional:
-            out += "?"
-
-        return out
-    
-    __repr__ = __str__
-
-@dataclass(frozen=True)
-class Orthokeysymbol:
-    keysymbols: tuple[Keysymbol, ...]
-    chars: str
-
-    def __str__(self):
-        keysymbols_string = " ".join(str(keysymbol) for keysymbol in self.keysymbols)
-        if len(self.keysymbols) > 1:
-            keysymbols_string = f"({keysymbols_string})"
-
-        return f"{self.chars}.{keysymbols_string}"
-    
-    __repr__ = __str__
-
-
-
 _NONPHONETIC_KEYSYMBOLS = tuple("*~-.<>{}#=$")
 _STRESS_KEYSYMBOLS = {
     "*": 1,
@@ -322,7 +289,7 @@ class match_keysymbols_to_chars(AlignmentService, ABC):
             if any(ch in keysymbol for ch in _NONPHONETIC_KEYSYMBOLS): continue
 
             optional = keysymbol.startswith("[") and keysymbol.endswith("]")
-            phonetic_keysymbols.append(Keysymbol(re.sub(r"[\[\]]", "", keysymbol), re.sub(r"[\[\]\d]", "", keysymbol.lower()), next_stress, optional))
+            phonetic_keysymbols.append(Keysymbol(re.sub(r"[\[\]]", "", keysymbol), Keysymbol.get_match_symbol(keysymbol), next_stress, optional))
 
             next_stress = 0
 
@@ -366,68 +333,6 @@ class match_keysymbols_to_chars(AlignmentService, ABC):
             keysymbols[start_cell.x:end_cell.x],
             translation[start_cell.y:end_cell.y],
         )
-
-
-@dataclass(frozen=True)
-class Sopheme:
-    orthokeysymbols: tuple[Orthokeysymbol, ...]
-    steno: tuple[Stroke, ...]
-    phoneme: "Stenophoneme | str | None"
-
-    def __str__(self):
-        out = " ".join(str(orthokeysymbol) for orthokeysymbol in self.orthokeysymbols)
-        if len(self.orthokeysymbols) > 1 and (self.phoneme is not None or len(self.steno) > 0):
-            out = f"({out})"
-
-        if self.phoneme is not None:
-            out += f"[{self.phoneme}]"
-        elif len(self.steno) > 0:
-            out += f"[[{'/'.join(stroke.rtfcre for stroke in self.steno)}]]"
-            
-        return out
-    
-    __repr__ = __str__
-
-    def shortest_form(self):
-        key = (
-            tuple(
-                (
-                    tuple(keysymbol.symbol for keysymbol in orthokeysymbol.keysymbols),
-                    orthokeysymbol.chars,
-                )
-                for orthokeysymbol in self.orthokeysymbols
-            ),
-            self.phoneme,
-        )
-
-        return _sopheme_shorthands.get(key, str(self))
-
-_sopheme_shorthands = {
-    ((((keysymbols), ortho),), phoneme): ortho
-    for (phoneme, keysymbols), orthos in {
-        (Stenophoneme.P, ("p",)): ("p", "pp"),
-        (Stenophoneme.T, ("t",)): ("t", "tt"),
-        (Stenophoneme.K, ("k",)): ("k", "kk", "ck", "q"),
-        (Stenophoneme.B, ("b",)): ("b", "bb"),
-        (Stenophoneme.D, ("d",)): ("d", "dd"),
-        (Stenophoneme.G, ("g",)): ("g", "gg"),
-        (Stenophoneme.CH, ("ch",)): ("ch",),
-        (Stenophoneme.J, ("jh",)): ("j",),
-        (Stenophoneme.S, ("s",)): ("s", "ss"),
-        (Stenophoneme.Z, ("z",)): ("z", "zz"),
-        (Stenophoneme.SH, ("sh",)): ("sh", "ti", "ci", "si", "ssi"),
-        (Stenophoneme.F, ("f",)): ("f", "ff", "ph"),
-        (Stenophoneme.V, ("v",)): ("v", "vv"),
-        (Stenophoneme.H, ("h",)): ("h",),
-        (Stenophoneme.M, ("m",)): ("m", "mm"),
-        (Stenophoneme.N, ("n",)): ("n", "nn"),
-        (Stenophoneme.L, ("l",)): ("l", "ll"),
-        (Stenophoneme.R, ("r",)): ("r", "rr"),
-        (Stenophoneme.Y, ("y",)): ("y",),
-        (Stenophoneme.W, ("w",)): ("w",),
-    }.items()
-    for ortho in orthos
-}
 
 @aligner
 class match_orthokeysymbols_to_chords(AlignmentService, ABC):

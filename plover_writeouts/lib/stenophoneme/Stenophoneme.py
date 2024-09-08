@@ -43,6 +43,9 @@ class Stenophoneme(Enum):
     OI = auto()
     OU = auto()
 
+    AO = auto()
+    AE = auto()
+
     DUMMY = auto()
 
     def __str__(self):

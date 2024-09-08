@@ -21,6 +21,7 @@ class _Affix:
 
 def _main():
     from plover_writeouts.lib.alignment.match_sophemes import match_sophemes
+    from plover_writeouts.lib.stenophoneme.Stenophoneme import Stenophoneme
 
     with open(Path(__file__).parent.parent / "local-utils/data/lapwing-base.json", "r", encoding="utf-8") as file:
         lapwing_dict = json.load(file)
@@ -47,31 +48,25 @@ def _main():
         reverse_lapwing_dict[translation] = [outline_steno]
 
     
-    out_path = Path(__file__).parent.parent / "local-utils/out/lapwing"
+    out_path = Path(__file__).parent.parent / "local-utils/out/lapwing.hatchery"
     out_path.parent.mkdir(exist_ok=True, parents=True)
 
     def generate():
+        sophemes_json = []
+
         with open(Path(__file__).parent.parent / "local-utils/data/unilex", "r", encoding="utf-8") as file:
             with open(out_path, "w+", encoding="utf-8") as out_file:
-                while True:
-                    line = file.readline()
-                    if len(line) == 0: break
-
+                while len(line := file.readline()) > 0:
                     translation, _, _, transcription, _, _ = line.split(":")
                     if translation not in reverse_lapwing_dict: continue
 
                     for outline_steno in reverse_lapwing_dict[translation]:
-                        # phonos = match_keysymbols_to_writeout_chords(tuple(phonetic_keysymbols), outline_steno)
-                        # sophemes = match_chars_to_phonos(translation, phonos)
+                        # out_file.write(" ".join(str(sopheme) for sopheme in match_sophemes(translation, transcription, outline_steno)) + "\n")
 
-                        out_file.write(" ".join(str(sopheme) for sopheme in match_sophemes(translation, transcription, outline_steno)) + "\n")
+                        sophemes_json.append(tuple(sopheme.to_dict() for sopheme in match_sophemes(translation, transcription, outline_steno)))
 
-                        # out_file.write(" ".join(f"{sopheme.ortho}.({' '.join(
-                        #     keysymbol
-                        #     for stenophoneme in sopheme.stenophonemes
-                        #     for keysymbol in stenophoneme.data
-                        # )})" for sopheme in sophemes) + "\n")
-                    
+                json.dump(sophemes_json, out_file)
+
     print(f"Generating entries…")
     duration = timeit.timeit(generate, number=1)
     print(f"Finished (took {duration} s)")

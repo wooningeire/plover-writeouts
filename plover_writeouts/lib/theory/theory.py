@@ -40,7 +40,35 @@ PHONEMES_TO_CHORDS_LEFT: dict[Stenophoneme, Stroke] = {
         Stenophoneme.SH: "SH",
         Stenophoneme.TH: "TH",
         Stenophoneme.CH: "KH",
+
+        Stenophoneme.NG: "TPH",
     }.items()
+}
+
+PHONEMES_TO_CHORDS_VOWELS: dict[Stenophoneme, Stroke] = {
+    phoneme: Stroke.from_steno(steno)
+    for phoneme, steno in {
+        Stenophoneme.AA: "AEU",
+        Stenophoneme.A: "A",
+        Stenophoneme.EE: "AOE",
+        Stenophoneme.E: "E",
+        Stenophoneme.II: "AOEU",
+        Stenophoneme.I: "EU",
+        Stenophoneme.OO: "OE",
+        Stenophoneme.O: "O",
+        Stenophoneme.UU: "AOU",
+        Stenophoneme.U: "U",
+        Stenophoneme.AU: "AU",
+        Stenophoneme.OI: "OEU",
+        Stenophoneme.OU: "OU",
+        Stenophoneme.AE: "AE",
+        Stenophoneme.AO: "AO",
+    }.items()
+}
+
+CHORDS_TO_PHONEMES_VOWELS = {
+    stroke: phoneme
+    for phoneme, stroke in PHONEMES_TO_CHORDS_VOWELS.items()
 }
 
 PHONEMES_TO_CHORDS_RIGHT: dict[Stenophoneme, Stroke] = {

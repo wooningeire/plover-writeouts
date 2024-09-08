@@ -1,4 +1,4 @@
-from typing import Callable, Iterable, NamedTuple, Optional, Any
+from typing import Callable, Iterable, NamedTuple, Optional, Any, TextIO
 import dataclasses
 from dataclasses import dataclass
 from abc import ABC, abstractmethod
@@ -8,6 +8,7 @@ import plover.log
 
 from ..util.Trie import ReadonlyTrie, Transition, TransitionCostInfo, Trie, NondeterministicTrie
 from ..stenophoneme.stenophoneme_util import split_consonant_phonemes
+from ..sopheme.Sopheme import Sopheme
 from ..util.util import can_add_stroke_on, split_stroke_parts
 from ..theory.theory import (
     Stenophoneme,
@@ -27,9 +28,11 @@ from ..theory.theory import (
     VOWEL_CONSCIOUS_CLUSTERS,
     PHONEMES_TO_CHORDS_LEFT,
     PHONEMES_TO_CHORDS_LEFT_ALT,
+    PHONEMES_TO_CHORDS_VOWELS,
     PHONEMES_TO_CHORDS_RIGHT,
     PHONEMES_TO_CHORDS_RIGHT_ALT,
     DIPHTHONG_TRANSITIONS_BY_FIRST_VOWEL,
+    CHORDS_TO_PHONEMES_VOWELS,
     OPTIMIZE_TRIE_SPACE,
     TransitionCosts,
 )
@@ -101,7 +104,7 @@ class ClusterRight(Cluster):
 
 class ConsonantVowelGroup(NamedTuple):
     consonants: tuple[Stenophoneme, ...]
-    vowel: Stroke
+    vowel: Stenophoneme
 
 @dataclass(frozen=True)
 class OutlinePhonemes:
@@ -188,10 +191,6 @@ class OutlinePhonemes:
         return self.get_consonant(*last_index)
 
 
-@dataclass(frozen=True)
-class AnnotatedPhoneme:
-    phoneme: Stenophoneme
-
 
 def build_lookup(mappings: dict[str, str]):
     trie: NondeterministicTrie[str, str] = NondeterministicTrie()
@@ -203,6 +202,22 @@ def build_lookup(mappings: dict[str, str]):
         _add_entry(trie, phonemes, translation)
 
     # plover.log.debug(str(trie))
+    return _create_lookup_for(trie)
+
+
+def build_lookup_hatchery(file: TextIO):
+    import json
+
+    trie: NondeterministicTrie[str, str] = NondeterministicTrie()
+
+    entries_json = json.load(file)
+    for entry in entries_json:
+        sophemes = tuple(Sopheme.parse_sopheme_dict(sopheme_json) for sopheme_json in entry)
+        _add_entry(trie, _get_sopheme_phonemes(sophemes), Sopheme.get_translation(sophemes))
+
+    # while len(line := file.readline()) > 0:
+    #     _add_entry(trie, Sopheme.parse_seq())
+
     return _create_lookup_for(trie)
 
 def _get_outline_phonemes(outline: Iterable[Stroke]):
@@ -222,11 +237,71 @@ def _get_outline_phonemes(outline: Iterable[Stroke]):
             if is_diphthong_transition and (prev_vowel := consonant_vowel_groups[-1].vowel) in DIPHTHONG_TRANSITIONS_BY_FIRST_VOWEL:
                 current_group_consonants.append(DIPHTHONG_TRANSITIONS_BY_FIRST_VOWEL[prev_vowel])
 
-            consonant_vowel_groups.append(ConsonantVowelGroup(tuple(current_group_consonants), vowels))
+            consonant_vowel_groups.append(ConsonantVowelGroup(tuple(current_group_consonants), CHORDS_TO_PHONEMES_VOWELS[vowels]))
 
             current_group_consonants = []
 
         current_group_consonants.extend(split_consonant_phonemes(right_bank_consonants))
+
+    return OutlinePhonemes(tuple(consonant_vowel_groups), tuple(current_group_consonants))
+
+_vowel_phonemes = {
+    Stenophoneme.AA,
+    Stenophoneme.A,
+    Stenophoneme.EE,
+    Stenophoneme.E,
+    Stenophoneme.II,
+    Stenophoneme.I,
+    Stenophoneme.OO,
+    Stenophoneme.O,
+    Stenophoneme.UU,
+    Stenophoneme.U,
+    Stenophoneme.AU,
+    Stenophoneme.OI,
+    Stenophoneme.OU,
+    Stenophoneme.AE,
+}
+def _get_sopheme_phonemes(sophemes: Iterable[Sopheme]):
+    consonant_vowel_groups: list[ConsonantVowelGroup] = []
+
+    current_group_consonants: list[Stenophoneme] = []
+    
+    for sopheme in sophemes:
+        if sopheme.phoneme is None and len(sopheme.steno) == 0:
+            continue
+
+        elif sopheme.phoneme in _vowel_phonemes:
+            is_diphthong_transition = len(consonant_vowel_groups) > 0 and len(current_group_consonants) == 0
+            if is_diphthong_transition and (prev_vowel := consonant_vowel_groups[-1].vowel) in DIPHTHONG_TRANSITIONS_BY_FIRST_VOWEL:
+                current_group_consonants.append(DIPHTHONG_TRANSITIONS_BY_FIRST_VOWEL[prev_vowel])
+
+            consonant_vowel_groups.append(ConsonantVowelGroup(tuple(current_group_consonants), sopheme.phoneme))
+            
+            current_group_consonants = []
+            
+        elif any(any(key in stroke.rtfcre for key in "AOEU") for stroke in sopheme.steno):
+            is_diphthong_transition = len(consonant_vowel_groups) > 0 and len(current_group_consonants) == 0
+            if is_diphthong_transition and (prev_vowel := consonant_vowel_groups[-1].vowel) in DIPHTHONG_TRANSITIONS_BY_FIRST_VOWEL:
+                current_group_consonants.append(DIPHTHONG_TRANSITIONS_BY_FIRST_VOWEL[prev_vowel])
+
+            for stroke in sopheme.steno:
+                vowel_substroke = stroke & Stroke.from_steno("AOEU")
+                if len(vowel_substroke) > 0:
+                    break
+                
+            vowel_phoneme = CHORDS_TO_PHONEMES_VOWELS[vowel_substroke]
+
+            consonant_vowel_groups.append(ConsonantVowelGroup(tuple(current_group_consonants), vowel_phoneme))
+
+            current_group_consonants = []
+        
+        else:
+            if sopheme.phoneme is not None:
+                current_group_consonants.append(sopheme.phoneme)
+            else:
+                for stroke in sopheme.steno:
+                    current_group_consonants.extend(split_consonant_phonemes(stroke))
+
 
     return OutlinePhonemes(tuple(consonant_vowel_groups), tuple(current_group_consonants))
 
@@ -336,7 +411,7 @@ def _add_entry(trie: NondeterministicTrie[str, str], phonemes: OutlinePhonemes, 
         # if it matches verbatim
         if vowels_src_node is None:
             vowels_src_node = state.left_consonant_src_node
-        postvowels_node = trie.get_first_dst_node_else_create(vowels_src_node, vowel.rtfcre, TransitionCostInfo(0, translation))
+        postvowels_node = trie.get_first_dst_node_else_create(vowels_src_node, PHONEMES_TO_CHORDS_VOWELS[vowel].rtfcre, TransitionCostInfo(0, translation))
 
         _handle_clusters(upcoming_clusters, state.left_consonant_src_node, state.right_consonant_src_node, state, True)
 
