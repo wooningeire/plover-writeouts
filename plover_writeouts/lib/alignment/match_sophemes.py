@@ -141,7 +141,7 @@ _PHONEME_TO_STENO_MAPPINGS = {
 
 @dataclass(frozen=True)
 class _Mapping:
-    phoneme: "Stenophoneme | str | None"
+    phoneme: "Stenophoneme | None"
     keys: tuple[AsteriskableKey, ...]
 
 _mappings = lambda phoneme: tuple(zip(cycle((phoneme,)), _PHONEME_TO_STENO_MAPPINGS[phoneme]))
@@ -168,8 +168,10 @@ _any_vowel_mapping = (
 
 _KEYSYMBOL_TO_STENO_MAPPINGS = {
     tuple(keysymbol.split(" ")): tuple(_Mapping(phoneme, AsteriskableKey.annotations_from_outline(outline_steno)) for phoneme, outline_steno in mapping)
-    for keysymbol, mapping in cast(dict[str, tuple[tuple[Stenophoneme | str | None, str], ...]], {
+    for keysymbol, mapping in cast(dict[str, tuple[tuple[Stenophoneme | None, str], ...]], {
         # How does each keysymbol appear as it does in Lapwing?
+
+        "": _no_phoneme("KWR", "W"),
 
         "p": _mappings(Stenophoneme.P),
         "t": (*_mappings(Stenophoneme.T), *_mappings(Stenophoneme.D)),
@@ -246,7 +248,7 @@ _KEYSYMBOL_TO_STENO_MAPPINGS = {
         "er": (*_mappings(Stenophoneme.E), *_mappings(Stenophoneme.U)),
         "eir": _mappings(Stenophoneme.E),
         "ur": (*_mappings(Stenophoneme.U), *_mappings(Stenophoneme.UU)),
-        "i@": _vowels("KWRA", "KWRO", "KWRE", "KWRU", "KWREU", "KWHA", "KWHO", "KWHE", "KWHU", "KWHEU"),
+        "i@": _any_vowel_mapping,
         
         "k s": _no_phoneme("KP"),
         "g z": _no_phoneme("KP"),

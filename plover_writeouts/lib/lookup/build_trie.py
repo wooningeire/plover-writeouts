@@ -6,6 +6,7 @@ from abc import ABC, abstractmethod
 from plover.steno import Stroke
 import plover.log
 
+from ..stenophoneme.Stenophoneme import vowel_phonemes
 from ..util.Trie import ReadonlyTrie, TransitionCostInfo, Trie, NondeterministicTrie
 from ..util.util import can_add_stroke_on
 from ..theory.theory import (
@@ -369,7 +370,7 @@ def _find_vowel_clusters(
             node
             for current_node in current_nodes
             for node in (_vowel_clusters_trie.get_dst_node(current_node, phoneme),)
-                    + ((_vowel_clusters_trie.get_dst_node(current_node, Stenophoneme.ANY_VOWEL),) if isinstance(phoneme, Stroke) else ())
+                    + ((_vowel_clusters_trie.get_dst_node(current_node, Stenophoneme.ANY_VOWEL),) if phoneme in vowel_phonemes else ())
             if node is not None
         }
 

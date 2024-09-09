@@ -53,3 +53,21 @@ class Stenophoneme(Enum):
     
     def __repr__(self):
         return self.__str__()
+
+vowel_phonemes = {
+    Stenophoneme.AA,
+    Stenophoneme.A,
+    Stenophoneme.EE,
+    Stenophoneme.E,
+    Stenophoneme.II,
+    Stenophoneme.I,
+    Stenophoneme.OO,
+    Stenophoneme.O,
+    Stenophoneme.UU,
+    Stenophoneme.U,
+    Stenophoneme.AU,
+    Stenophoneme.OI,
+    Stenophoneme.OU,
+    Stenophoneme.AE,
+    Stenophoneme.AO,
+}

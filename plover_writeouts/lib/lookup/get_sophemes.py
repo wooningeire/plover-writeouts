@@ -2,6 +2,7 @@ from typing import Iterable
 
 from plover.steno import Stroke
 
+from ..stenophoneme.Stenophoneme import vowel_phonemes
 from ..stenophoneme.stenophoneme_util import split_consonant_phonemes
 from ..sopheme.Sopheme import Sopheme
 from ..util.util import split_stroke_parts
@@ -37,23 +38,6 @@ def get_outline_phonemes(outline: Iterable[Stroke]):
 
     return OutlinePhonemes(tuple(consonant_vowel_groups), tuple(current_group_consonants))
 
-_vowel_phonemes = {
-    Stenophoneme.AA,
-    Stenophoneme.A,
-    Stenophoneme.EE,
-    Stenophoneme.E,
-    Stenophoneme.II,
-    Stenophoneme.I,
-    Stenophoneme.OO,
-    Stenophoneme.O,
-    Stenophoneme.UU,
-    Stenophoneme.U,
-    Stenophoneme.AU,
-    Stenophoneme.OI,
-    Stenophoneme.OU,
-    Stenophoneme.AE,
-    Stenophoneme.AO,
-}
 def get_sopheme_phonemes(sophemes: Iterable[Sopheme]):
     consonant_vowel_groups: list[ConsonantVowelGroup] = []
 
@@ -63,7 +47,7 @@ def get_sopheme_phonemes(sophemes: Iterable[Sopheme]):
         if sopheme.phoneme is None and len(sopheme.steno) == 0:
             continue
 
-        elif sopheme.phoneme in _vowel_phonemes:
+        elif sopheme.phoneme in vowel_phonemes:
             is_diphthong_transition = len(consonant_vowel_groups) > 0 and len(current_group_consonants) == 0
             if is_diphthong_transition and (prev_vowel := consonant_vowel_groups[-1].vowel) in DIPHTHONG_TRANSITIONS_BY_FIRST_VOWEL:
                 current_group_consonants.append(DIPHTHONG_TRANSITIONS_BY_FIRST_VOWEL[prev_vowel])
