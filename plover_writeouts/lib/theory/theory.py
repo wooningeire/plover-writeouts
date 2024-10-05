@@ -188,25 +188,25 @@ VOWEL_CONSCIOUS_CLUSTERS: "dict[tuple[Stenophoneme | Stroke, ...], Stroke]" = {
         (Stenophoneme.E, Stenophoneme.K, Stenophoneme.S, Stenophoneme.P): "SKPW",
         (Stenophoneme.ANY_VOWEL, Stenophoneme.N): "TPH",
         (Stenophoneme.ANY_VOWEL, Stenophoneme.N, Stenophoneme.S): "STPH",
-        (Stenophoneme.ANY_VOWEL, Stenophoneme.N, Stenophoneme.F): "TPWH",
-        (Stenophoneme.ANY_VOWEL, Stenophoneme.N, Stenophoneme.V): "TPWH",
+        (Stenophoneme.ANY_VOWEL, Stenophoneme.N, Stenophoneme.F): "TPW",
+        (Stenophoneme.ANY_VOWEL, Stenophoneme.N, Stenophoneme.V): "TPW",
         (Stenophoneme.ANY_VOWEL, Stenophoneme.M): "PH",
     }.items()
 }
 
 
-DIPHTHONG_TRANSITIONS_BY_FIRST_VOWEL: dict[Stroke, Stenophoneme] = {
-    Stroke.from_steno(steno): phoneme
-    for steno, phoneme in {
-        "E": Stenophoneme.Y,
-        "OE": Stenophoneme.W,
-        "OU": Stenophoneme.W,
-        "EU": Stenophoneme.Y,
-        "AOE": Stenophoneme.Y,
-        "AOU": Stenophoneme.W,
-        "AEU": Stenophoneme.Y,
-        "OEU": Stenophoneme.Y,
-        "AOEU": Stenophoneme.Y,
+DIPHTHONG_TRANSITIONS_BY_FIRST_VOWEL: dict[Stenophoneme, Stenophoneme] = {
+    prev_vowel_phoneme: phoneme
+    for prev_vowel_phoneme, phoneme in {
+        Stenophoneme.E: Stenophoneme.Y,
+        Stenophoneme.OO: Stenophoneme.W,
+        Stenophoneme.OU: Stenophoneme.W,
+        Stenophoneme.I: Stenophoneme.Y,
+        Stenophoneme.EE: Stenophoneme.Y,
+        Stenophoneme.UU: Stenophoneme.W,
+        Stenophoneme.AA: Stenophoneme.Y,
+        Stenophoneme.OI: Stenophoneme.Y,
+        Stenophoneme.II: Stenophoneme.Y,
     }.items()
 }
 
