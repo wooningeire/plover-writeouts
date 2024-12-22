@@ -1,5 +1,4 @@
-from typing import Optional, Callable
-import json
+from typing import Optional, Callable, Generator, Any
 
 from plover.steno import Stroke
 from plover.steno_dictionary import StenoDictionary
@@ -15,13 +14,14 @@ class HatcheryDictionary(StenoDictionary):
         """(override)"""
         self._longest_key = 12
 
-        self.__maybe_lookup: Optional[Callable[[tuple[str, ...]], Optional[str]]] = None
+        self.__maybe_lookup: "Callable[[tuple[str, ...]], str | None] | None" = None
+        self.__maybe_reverse_lookup: "Callable[[str], list[tuple[str, ...]]] | None" = None
 
     def _load(self, filepath: str):
         from .lib.lookup import build_lookup_hatchery
 
         with open(filepath, "r", encoding="utf-8") as file:
-            self.__maybe_lookup = build_lookup_hatchery(file)
+            self.__maybe_lookup, self.__maybe_reverse_lookup = build_lookup_hatchery(file)
             
 
     def __getitem__(self, stroke_stenos: tuple[str, ...]) -> str:
@@ -37,6 +37,11 @@ class HatcheryDictionary(StenoDictionary):
             return fallback
         
         return result
+    
+    def reverse_lookup(self, translation: str) -> list[tuple[str, ...]]:
+        if self.__maybe_reverse_lookup is None: raise Exception("reverse lookup occurred before load")
+
+        return self.__maybe_reverse_lookup(translation)
     
     def __lookup(self, stroke_stenos: tuple[str, ...]) -> Optional[str]:
         if self.__maybe_lookup is None: raise Exception("lookup occurred before load")

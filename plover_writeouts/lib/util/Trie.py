@@ -1,3 +1,4 @@
+from collections import defaultdict
 from typing import Generic, Iterable, Optional, TypeVar, NamedTuple
 from dataclasses import dataclass
 
@@ -102,7 +103,7 @@ class Trie(Generic[K, V]):
 class ReadonlyTrie(Generic[K, V]):
     ROOT = 0
 
-    def __init__(self, nodes: list[dict[int, int]], translations: dict[int, V], keys: dict[K, int]):
+    def __init__(self, nodes: list[dict[int, int]], translations: dict[int, V], keys: dict[K, int], support_reverse=False):
         self.__nodes: dict[tuple[int, int], int] = {
             (src_node, key): dst_node
             for src_node, transitions in enumerate(nodes)
@@ -137,10 +138,15 @@ class NondeterministicTrie(Generic[K, V]):
     
     def __init__(self):
         self.__nodes: list[dict[int, list[int]]] = [{}]
+        """Mapping from each node's id to its lists of destination nodes, based on the keys' ids"""
         self.__translations: dict[int, list[int]] = {}
+        """Mapping from each node's id to its list of translation ids"""
         self.__keys: dict[K, int] = {}
+        """Mapping from each key to its id"""
         self.__values: dict[V, int] = {}
+        """Mapping from each value to its id"""
         self.__values_list: list[V] = []
+        """Mapping from each value's id to the value"""
         self.__transition_costs: dict[TransitionCostKey, float] = {}
 
     def get_first_dst_node_else_create(self, src_node: int, key: K, cost_info: TransitionCostInfo[V]) -> int:
@@ -285,10 +291,10 @@ class NondeterministicTrie(Generic[K, V]):
 #         return new_trie
     
 
-    def profile(self):
-        from pympler.asizeof import asizeof
-        n_transitions = sum(sum(len(dst_nodes) for dst_nodes in transitions.values()) for transitions in self.__nodes)
-        return f"{len(self.__nodes):,} nodes, {n_transitions:,} transitions, {len(self.__translations):,} translations ({asizeof(self):,} bytes)"
+    # def profile(self):
+    #     from pympler.asizeof import asizeof
+    #     n_transitions = sum(sum(len(dst_nodes) for dst_nodes in transitions.values()) for transitions in self.__nodes)
+    #     return f"{len(self.__nodes):,} nodes, {n_transitions:,} transitions, {len(self.__translations):,} translations ({asizeof(self):,} bytes)"
     
     # def frozen(self):
     #     return ReadonlyNondeterministicTrie(self.__nodes, self.__translations, self.__keys)
@@ -319,6 +325,42 @@ class NondeterministicTrie(Generic[K, V]):
         if cost_info is None: return
         cost_key = TransitionCostKey(Transition(src_node, key_id, new_transition_index), self.__get_value_id_else_create(cost_info.value))
         self.__transition_costs[cost_key] = min(cost_info.cost, self.__transition_costs.get(cost_key, float("inf")))
+
+    def build_reverse_lookup(self):
+        reverse_nodes: dict[int, dict[int, list[tuple[int, int]]]] = defaultdict(lambda: defaultdict(list))
+        for src_node, transitions in enumerate(self.__nodes):
+            for key_id, dst_nodes in transitions.items():
+                for i, dst_node in enumerate(dst_nodes):
+                    reverse_nodes[dst_node][key_id].append((src_node, i))
+
+        reverse_translations: dict[V, list[int]] = defaultdict(list)
+        for node, translation_ids in self.__translations.items():
+            for translation_id in translation_ids:
+                reverse_translations[self.__values_list[translation_id]].append(node)
+
+        key_ids_to_keys = self.__key_ids_to_keys()
+
+        def dfs(node: int, key_ids_reversed: tuple[int, ...], visited_nodes: set[int], translation: V):
+            if node == self.ROOT:
+                yield tuple(key_ids_to_keys[key_id] for key_id in reversed(key_ids_reversed))
+                return
+            
+            for key_id, src_nodes in reverse_nodes[node].items():
+                for src_node, transition_index in src_nodes:
+                    if src_node in visited_nodes: continue
+
+                    cost_key = TransitionCostKey(Transition(src_node, key_id, transition_index), self.__get_value_id_else_create(translation))
+                    if cost_key not in self.__transition_costs: continue
+
+                    yield from dfs(src_node, key_ids_reversed + (key_id,), visited_nodes | {src_node}, translation)
+
+        def get_sequences(translation: V):
+            if translation not in reverse_translations: return
+            
+            for node in reverse_translations[translation]:
+                yield from dfs(node, (), {node}, translation)
+        
+        return get_sequences
 
     # def __transfer_node_and_descendants_if_necessary(
     #     self: "NondeterministicTrie[str, str]",
@@ -415,8 +457,9 @@ class NondeterministicTrie(Generic[K, V]):
 #                 return translation
 #         return None
 
-#     def profile(self):
+    def profile(self):
 #         from pympler.asizeof import asizeof
-#         n_nodes = max(transition[0] for transition in self.__nodes.keys())
-#         n_transitions = sum(len(dst_nodes) for dst_nodes in self.__nodes.values())
+        n_nodes = len(self.__nodes)
+        n_transitions = sum(len(dst_nodes) for dst_nodes in self.__nodes)
 #         return f"{n_nodes:,} nodes, {n_transitions:,} transitions, {len(self.__translations):,} translations ({asizeof(self):,} bytes)"
+        return f"{n_nodes:,} nodes, {n_transitions:,} transitions, {len(self.__translations):,} translations"

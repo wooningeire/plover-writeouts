@@ -250,6 +250,8 @@ _KEYSYMBOL_TO_STENO_MAPPINGS = {
         "ur": (*_mappings(Stenophoneme.U), *_mappings(Stenophoneme.UU)),
         "i@": _any_vowel_mapping,
         
+        "E5": (*_mappings(Stenophoneme.E), *_mappings(Stenophoneme.EE), *_mappings(Stenophoneme.AA)),
+        
         "k s": _no_phoneme("KP"),
         "g z": _no_phoneme("KP"),
         "sh n": _no_phoneme("-GS"),

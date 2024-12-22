@@ -2,7 +2,7 @@ from plover.steno import Stroke
 import plover.log
 
 from ..util.Trie import Transition, NondeterministicTrie
-from ..util.util import can_add_stroke_on, split_stroke_parts
+from ..util.util import split_stroke_parts
 from ..theory.theory import (
     ALL_KEYS,
     ASTERISK_SUBSTROKE,
