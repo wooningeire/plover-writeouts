@@ -5,7 +5,7 @@ import plover.log
 
 from ..util.Trie import NondeterministicTrie
 from ..sopheme.Sopheme import Sopheme
-from .build_trie import add_entry
+from .build_trie.add_entry import add_entry
 from .build_lookup import create_lookup_for
 from .get_sophemes import get_outline_phonemes, get_sopheme_phonemes
 

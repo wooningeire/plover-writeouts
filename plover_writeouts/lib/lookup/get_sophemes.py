@@ -11,7 +11,7 @@ from ..theory.theory import (
     CHORDS_TO_PHONEMES_VOWELS,
     amphitheory,
 )
-from .build_trie import ConsonantVowelGroup, OutlineSounds
+from .build_trie.state import ConsonantVowelGroup, OutlineSounds
 
 def get_outline_phonemes(outline: Iterable[Stroke]):
     consonant_vowel_groups: list[ConsonantVowelGroup] = []

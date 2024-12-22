@@ -1,6 +1,4 @@
 
-from abc import ABC
-
 from plover.steno import Stroke
 
 from ..stenophoneme.Stenophoneme import Stenophoneme
@@ -105,6 +103,9 @@ class TheoryService:
     
     def left_consonant_chord(self, sound: Sound) -> Stroke:
         return self.spec.PHONEMES_TO_CHORDS_LEFT[sound.phoneme]
+    
+    def right_consonant_chord(self, sound: Sound) -> Stroke:
+        return self.spec.PHONEMES_TO_CHORDS_RIGHT[sound.phoneme]
     
     def split_consonant_phonemes(self, stroke: Stroke):
         return self.__split_consonant_phonemes(stroke)
