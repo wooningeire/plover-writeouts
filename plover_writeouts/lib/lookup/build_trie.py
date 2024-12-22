@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from plover.steno import Stroke
 import plover.log
 
-from .util import Sound
+from ..sopheme.Sound import Sound
 from ..stenophoneme.Stenophoneme import vowel_phonemes
 from ..util.Trie import ReadonlyTrie, TransitionCostInfo, Trie, NondeterministicTrie
 from ..util.util import can_add_stroke_on
@@ -18,13 +18,13 @@ from ..theory.theory import (
     INITIAL_VOWEL_CHORD,
     CLUSTERS,
     VOWEL_CONSCIOUS_CLUSTERS,
-    PHONEMES_TO_CHORDS_LEFT,
     PHONEMES_TO_CHORDS_LEFT_ALT,
     PHONEMES_TO_CHORDS_VOWELS,
     PHONEMES_TO_CHORDS_RIGHT,
     PHONEMES_TO_CHORDS_RIGHT_ALT,
     TransitionCosts,
 )
+from ..theory.theory import amphitheory
 
 class ConsonantVowelGroup(NamedTuple):
     consonants: tuple[Sound, ...]
@@ -114,29 +114,6 @@ class OutlineSounds:
         
         return self.get_consonant(*last_index)
 
-
-def _build_clusters_trie():
-    clusters_trie: Trie[Stenophoneme, Stroke] = Trie()
-    for phonemes, stroke in CLUSTERS.items():
-        current_head = clusters_trie.ROOT
-        for key in phonemes:
-            current_head = clusters_trie.get_dst_node_else_create(current_head, key)
-
-        clusters_trie.set_translation(current_head, stroke)
-    return clusters_trie.frozen()
-_clusters_trie = _build_clusters_trie()
-
-
-def _build_vowel_clusters_trie():
-    clusters_trie: "Trie[Stenophoneme | Stroke, Stroke]" = Trie()
-    for phonemes, stroke in VOWEL_CONSCIOUS_CLUSTERS.items():
-        current_head = clusters_trie.ROOT
-        for key in phonemes:
-            current_head = clusters_trie.get_dst_node_else_create(current_head, key)
-
-        clusters_trie.set_translation(current_head, stroke)
-    return clusters_trie.frozen()
-_vowel_clusters_trie = _build_vowel_clusters_trie()
 
 
 @dataclass(frozen=True)
@@ -343,14 +320,14 @@ def _find_clusters(
 
     state: EntryBuilderState,
 ):
-    current_head = _clusters_trie.ROOT
+    current_head = amphitheory.clusters_trie.ROOT
     current_index = (start_group_index, start_phoneme_index)
     while current_head is not None and current_index is not None:
-        current_head = _clusters_trie.get_dst_node(current_head, sounds.get_consonant(*current_index).phoneme)
+        current_head = amphitheory.clusters_trie.get_dst_node(current_head, sounds.get_consonant(*current_index).phoneme)
 
         if current_head is None: return
 
-        if (result := _get_clusters_from_node(current_head, current_index, _clusters_trie, state)) is not None:
+        if (result := _get_clusters_from_node(current_head, current_index, amphitheory.clusters_trie, state)) is not None:
             yield result
 
         current_index = sounds.increment_consonant_index(*current_index)
@@ -362,22 +339,22 @@ def _find_vowel_clusters(
 
     state: EntryBuilderState,
 ):
-    current_nodes = {_vowel_clusters_trie.ROOT}
+    current_nodes = {amphitheory.vowel_clusters_trie.ROOT}
     current_index = (start_group_index, start_phoneme_index)
     while current_nodes is not None and current_index is not None:
         sound = sounds[current_index]
         current_nodes = {
             node
             for current_node in current_nodes
-            for node in (_vowel_clusters_trie.get_dst_node(current_node, sound.phoneme),)
-                    + ((_vowel_clusters_trie.get_dst_node(current_node, Stenophoneme.ANY_VOWEL),) if sound.phoneme in vowel_phonemes else ())
+            for node in (amphitheory.vowel_clusters_trie.get_dst_node(current_node, sound.phoneme),)
+                    + ((amphitheory.vowel_clusters_trie.get_dst_node(current_node, Stenophoneme.ANY_VOWEL),) if sound.phoneme in vowel_phonemes else ())
             if node is not None
         }
 
         if len(current_nodes) == 0: return
 
         for current_node in current_nodes:
-            if (result := _get_clusters_from_node(current_node, current_index, _vowel_clusters_trie, state)) is None:
+            if (result := _get_clusters_from_node(current_node, current_index, amphitheory.vowel_clusters_trie, state)) is None:
                 continue
 
             yield result
@@ -404,7 +381,7 @@ def _add_left_consonant(state: EntryBuilderState):
         raise Exception
 
 
-    left_stroke = PHONEMES_TO_CHORDS_LEFT[state.consonant.phoneme]
+    left_stroke = amphitheory.left_consonant_chord(state.consonant)
     left_stroke_keys = left_stroke.keys()
 
     left_consonant_node = state.trie.get_first_dst_node_else_create_chain(state.left_consonant_src_node, left_stroke_keys, TransitionCostInfo(0, state.translation))
@@ -429,7 +406,7 @@ def _add_left_alt_consonant(state: EntryBuilderState, left_consonant_node: int):
         return None
     
     left_alt_stroke = PHONEMES_TO_CHORDS_LEFT_ALT[state.consonant.phoneme]
-    left_stroke = PHONEMES_TO_CHORDS_LEFT[state.consonant.phoneme]
+    left_stroke = amphitheory.left_consonant_chord(state.consonant)
 
     should_use_alt_from_prev = (
         state.last_consonant is None

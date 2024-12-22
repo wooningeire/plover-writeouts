@@ -1,6 +1,10 @@
+from abc import ABC
 from typing import Optional
 
 from plover.steno import Stroke
+
+from .spec import TheorySpec
+from .service import TheoryService
 
 from ..stenophoneme.Stenophoneme import Stenophoneme
 
@@ -222,3 +226,16 @@ TRIE_LINKER_KEY = "-"
 
 
 OPTIMIZE_TRIE_SPACE = False
+
+
+
+@TheoryService.theory
+class amphitheory(TheorySpec, ABC):
+    CLUSTERS = CLUSTERS
+    VOWEL_CONSCIOUS_CLUSTERS = VOWEL_CONSCIOUS_CLUSTERS
+
+    PHONEMES_TO_CHORDS_LEFT = PHONEMES_TO_CHORDS_LEFT
+    PHONEMES_TO_CHORDS_RIGHT = PHONEMES_TO_CHORDS_RIGHT
+
+    LINKER_CHORD = LINKER_CHORD
+    LEFT_BANK_CONSONANTS_SUBSTROKE = LEFT_BANK_CONSONANTS_SUBSTROKE

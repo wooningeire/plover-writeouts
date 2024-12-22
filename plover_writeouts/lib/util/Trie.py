@@ -1,12 +1,6 @@
 from typing import Generic, Iterable, Optional, TypeVar, NamedTuple
 from dataclasses import dataclass
 
-from plover.steno import Stroke
-import plover.log
-
-from ..theory.theory import LINKER_CHORD, TRIE_LINKER_KEY, TRIE_STROKE_BOUNDARY_KEY
-from .util import can_add_stroke_on
-
 S = TypeVar("S")
 T = TypeVar("T")
 K = TypeVar("K")

@@ -2,15 +2,14 @@ from typing import Iterable
 
 from plover.steno import Stroke
 
-from .util import Sound
+from ..sopheme.Sound import Sound
 from ..stenophoneme.Stenophoneme import vowel_phonemes
-from ..stenophoneme.stenophoneme_util import split_consonant_phonemes
 from ..sopheme.Sopheme import Sopheme
 from ..util.util import split_stroke_parts
 from ..theory.theory import (
-    Stenophoneme,
     DIPHTHONG_TRANSITIONS_BY_FIRST_VOWEL,
     CHORDS_TO_PHONEMES_VOWELS,
+    amphitheory,
 )
 from .build_trie import ConsonantVowelGroup, OutlineSounds
 
@@ -24,7 +23,7 @@ def get_outline_phonemes(outline: Iterable[Stroke]):
         if len(asterisk) > 0:
             return None
 
-        current_group_consonants.extend(Sound(phoneme, None) for phoneme in split_consonant_phonemes(left_bank_consonants))
+        current_group_consonants.extend(Sound(phoneme, None) for phoneme in amphitheory.split_consonant_phonemes(left_bank_consonants))
 
         if len(vowels) > 0:
             is_diphthong_transition = len(consonant_vowel_groups) > 0 and len(current_group_consonants) == 0
@@ -35,7 +34,7 @@ def get_outline_phonemes(outline: Iterable[Stroke]):
 
             current_group_consonants = []
 
-        current_group_consonants.extend(Sound(phoneme, None) for phoneme in split_consonant_phonemes(right_bank_consonants))
+        current_group_consonants.extend(Sound(phoneme, None) for phoneme in amphitheory.split_consonant_phonemes(right_bank_consonants))
 
     return OutlineSounds(tuple(consonant_vowel_groups), tuple(current_group_consonants))
 
@@ -78,7 +77,7 @@ def get_sopheme_phonemes(sophemes: Iterable[Sopheme]):
                 current_group_consonants.append(Sound.from_sopheme(sopheme))
             else:
                 for stroke in sopheme.steno:
-                    for phoneme in split_consonant_phonemes(stroke):
+                    for phoneme in amphitheory.split_consonant_phonemes(stroke):
                         current_group_consonants.append(Sound(phoneme, sopheme))
 
 

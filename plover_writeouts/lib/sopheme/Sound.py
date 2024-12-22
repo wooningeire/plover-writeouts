@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from ..sopheme.Sopheme import Sopheme
+from .Sopheme import Sopheme
 from ..stenophoneme.Stenophoneme import Stenophoneme
 
 @dataclass
