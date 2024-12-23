@@ -1,8 +1,9 @@
 from pathlib import Path
 import json
-import re
+import os
 from dataclasses import dataclass
 import timeit
+import argparse
     
 from plover import system
 from plover.config import DEFAULT_SYSTEM_NAME
@@ -19,11 +20,12 @@ class _Affix:
     is_prefix: bool
 
 
-def _main():
+def _main(args: argparse.Namespace):
     from plover_writeouts.lib.alignment.match_sophemes import match_sophemes
-    from plover_writeouts.lib.stenophoneme.Stenophoneme import Stenophoneme
 
-    with open(Path(__file__).parent.parent / "local-utils/data/lapwing-base.json", "r", encoding="utf-8") as file:
+    root = Path(os.getcwd())
+
+    with open(root / args.in_json_path, "r", encoding="utf-8") as file:
         lapwing_dict = json.load(file)
     
     # reverse_lapwing_affixes_dict: dict[str, set[str]] = {}
@@ -48,13 +50,13 @@ def _main():
         reverse_lapwing_dict[translation] = [outline_steno]
 
     
-    out_path = Path(__file__).parent.parent / "local-utils/out/lapwing.hatchery"
+    out_path = root / args.out_path
     out_path.parent.mkdir(exist_ok=True, parents=True)
 
     def generate():
         sophemes_json = []
 
-        with open(Path(__file__).parent.parent / "local-utils/data/unilex", "r", encoding="utf-8") as file:
+        with open(root / args.in_unilex_path, "r", encoding="utf-8") as file:
             with open(out_path, "w+", encoding="utf-8") as out_file:
                 while len(line := file.readline()) > 0:
                     translation, _, _, transcription, _, _ = line.split(":")
@@ -72,5 +74,11 @@ def _main():
     print(f"Finished (took {duration} s)")
 
 if __name__ == "__main__":
-    _setup_plover()
-    _main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-j", "--in-json-path", "--in-json", help="path to the input JSON dictionary", required=True)  
+    parser.add_argument("-u", "--in-unilex-path", "--in-unilex", help="path to the input Unilex lexicon", required=True)
+    parser.add_argument("-o", "--out-path", "--out", help="path to output the Hatchery dictionary", required=True)
+    args = parser.parse_args()
+
+    _setup_plover()  
+    _main(args)

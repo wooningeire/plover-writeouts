@@ -28,13 +28,17 @@ Sometimes, an outline will map to multiple possible translations, known as **<in
 
 
 ##### Generating a Hatchery dictionary from JSON
-`./local-utils/generate_word_list.py` takes a standard JSON dictionary (such as `lapwing-base.json`) and the [Unisyn v1.3](https://www.cstr.ed.ac.uk/projects/unisyn/) Unilex lexicon as input and produces a Hatchery dictionary as an output by automatically matching letters with phonemes/keysymbols.
+`./local-utils/json_to_hatchery.py` takes a standard JSON dictionary (such as `lapwing-base.json`) and the [Unisyn v1.3](https://www.cstr.ed.ac.uk/projects/unisyn/) Unilex lexicon as input and produces a Hatchery dictionary as an output by automatically matching letters with phonemes/keysymbols.
+
+Command line usage:
+
+```json_to_hatchery.py [-h] -j IN_JSON_PATH -u IN_UNILEX_PATH -o OUT_PATH```
 
 ## Methodology
 *See the algorithms being ideated and developed in the [algorithm drafting whiteboard](https://www.figma.com/board/22f2V9ufYxLdvBtGWj6nXv/Hatchery?node-id=0-1&t=rvw11Srj6YIEvjmo-1)*
 
 ### Dictionary generation
-Hatchery dictionaries are (or will be) intended to be added to directly. However, for testing or as a base, a JSON dictionary along with the Unilex lexicon can be used to generate a large starter dictionary (using `./local-utils/generate_word_list.py`).
+Hatchery dictionaries are (or will be) intended to be added to directly. However, for testing or as a base, a JSON dictionary along with the Unilex lexicon can be used to generate a large starter dictionary (using `./local-utils/json_to_hatchery.py`).
 
 Letters, steno chords, and keysymbols are matched and aligned using a modified variant of the [Needleman–Wunsch string alignment algorithm](https://en.wikipedia.org/wiki/Needleman–Wunsch_algorithm). First, letters are matched with keysymbols, and then those "orthokeysymbols" are matched with steno chords.
 
