@@ -17,9 +17,9 @@ A collection of rules and settings to use when converting Hatchery entries to st
 #### `.hatchery`
 A Hatchery word list.
 
-Each entry in a Hatchery word list is a sequence of orthographic–phonetic correspondences, referred to as **<u>sophemes</u>**. Upon loading a dictionary, Hatchery will apply your given theory rules and mappings to each entry, alongside rules such as vowel elision. The end result is that **any valid writeout** for an entry, with any combination of valid chords, elisions, and syllabic splits, will map to that entry (or some conflicting entry).
+Each entry in a Hatchery word list is a sequence of orthographic–phonetic correspondences, referred to as **<ins>sophemes</ins>**. Upon loading a dictionary, Hatchery will apply your given theory rules and mappings to each entry, alongside rules such as vowel elision. The end result is that **any valid writeout** for an entry, with any combination of valid chords, elisions, and syllabic splits, will map to that entry (or some conflicting entry).
 
-Sometimes, an outline will map to multiple possible translations, known as **<u>conflicts</u>**. Conflicts are ordered using a cost mechanism, determined by counting the number of abbreviation methods used in the outline, such as elisions (sorted into different types, such as stressed vowel vs unstressed vowel vs consonant) and clusters. The theory can specify specify these cost amounts as well as a variation cycler stroke that allows you to switch between the different conflicts in increasing order of cost.
+Sometimes, an outline will map to multiple possible translations, known as **<ins>conflicts</ins>**. Conflicts are ordered using a cost mechanism, determined by counting the number of abbreviation methods used in the outline, such as elisions (sorted into different types, such as stressed vowel vs unstressed vowel vs consonant) and clusters. The theory can specify specify these cost amounts as well as a variation cycler stroke that allows you to switch between the different conflicts in increasing order of cost.
 
 ##### File format
 > [!IMPORTANT]
