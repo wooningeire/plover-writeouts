@@ -2,17 +2,8 @@ from plover.steno import Stroke
 import plover.log
 
 from ..util.Trie import Transition, NondeterministicTrie
-from ..util.util import split_stroke_parts
-from ..theory.theory import (
-    ALL_KEYS,
-    ASTERISK_SUBSTROKE,
-    TRIE_STROKE_BOUNDARY_KEY,
-    TRIE_LINKER_KEY,
-    LINKER_CHORD,
-    VARIATION_CYCLER_STROKE,
-    # VARIATION_CYCLER_STROKE_BACKWARD,
-    PROHIBITED_STROKES,
-)
+from ..util.config import TRIE_STROKE_BOUNDARY_KEY, TRIE_LINKER_KEY
+from ..theory.theory import amphitheory
 
 def create_lookup_for(trie:  NondeterministicTrie[str, str]):
     def lookup(stroke_stenos: tuple[str, ...]):
@@ -31,17 +22,17 @@ def create_lookup_for(trie:  NondeterministicTrie[str, str]):
             if len(stroke) == 0:
                 return None
             
-            if stroke == VARIATION_CYCLER_STROKE:
+            if stroke == amphitheory.spec.CYCLER_STROKE:
                 n_variation += 1
                 continue
-            # if stroke == VARIATION_CYCLER_STROKE_BACKWARD:
+            # if stroke == CYCLER_STROKE_BACKWARD:
             #     n_variation -= 1
             #     continue
             
-            if stroke not in ALL_KEYS:
+            if stroke not in amphitheory.spec.ALL_KEYS:
                 return None
             
-            if stroke in PROHIBITED_STROKES:
+            if stroke in amphitheory.spec.PROHIBITED_STROKES:
                 return None
 
             if n_variation > 0:
@@ -54,7 +45,7 @@ def create_lookup_for(trie:  NondeterministicTrie[str, str]):
                 if len(current_nodes) == 0:
                     return None
 
-            left_bank_consonants, vowels, right_bank_consonants, asterisk = split_stroke_parts(stroke)
+            left_bank_consonants, vowels, right_bank_consonants, asterisk = amphitheory.split_stroke_parts(stroke)
 
             if len(left_bank_consonants) > 0:
                 # plover.log.debug(current_nodes)
@@ -67,7 +58,7 @@ def create_lookup_for(trie:  NondeterministicTrie[str, str]):
                         # plover.log.debug(f"\t{asterisk.rtfcre}\t {current_nodes}")
                         if len(current_nodes) == 0:
                             return None
-                elif left_bank_consonants == LINKER_CHORD:
+                elif left_bank_consonants == amphitheory.spec.LINKER_CHORD:
                     current_nodes = trie.get_dst_nodes_chain(current_nodes, left_bank_consonants.keys()) | trie.get_dst_nodes(current_nodes, TRIE_LINKER_KEY)
                 else:
                     current_nodes = trie.get_dst_nodes_chain(current_nodes, left_bank_consonants.keys())
@@ -108,7 +99,7 @@ def create_lookup_for(trie:  NondeterministicTrie[str, str]):
         else:
             for transition in reversed(first_choice[1][1]):
                 if trie.transition_has_key(transition, TRIE_STROKE_BOUNDARY_KEY): break
-                if not trie.transition_has_key(transition, ASTERISK_SUBSTROKE.rtfcre): continue
+                if not trie.transition_has_key(transition, amphitheory.spec.ASTERISK_SUBSTROKE.rtfcre): continue
 
                 return _nth_variation(translation_choices, n_variation)
 

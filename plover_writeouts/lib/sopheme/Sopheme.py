@@ -27,7 +27,7 @@ class Keysymbol:
 
     @staticmethod
     def get_match_symbol(symbol: str):
-        return re.sub(r"[\[\]]", "", symbol.lower())
+        return re.sub(r"[\[\]\d]", "", symbol.lower())
 
 @dataclass(frozen=True)
 class Orthokeysymbol:

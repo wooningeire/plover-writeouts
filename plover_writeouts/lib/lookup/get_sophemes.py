@@ -5,12 +5,7 @@ from plover.steno import Stroke
 from ..sopheme.Sound import Sound
 from ..stenophoneme.Stenophoneme import vowel_phonemes
 from ..sopheme.Sopheme import Sopheme
-from ..util.util import split_stroke_parts
-from ..theory.theory import (
-    DIPHTHONG_TRANSITIONS_BY_FIRST_VOWEL,
-    CHORDS_TO_PHONEMES_VOWELS,
-    amphitheory,
-)
+from ..theory.theory import amphitheory
 from .build_trie.state import ConsonantVowelGroup, OutlineSounds
 
 def get_outline_phonemes(outline: Iterable[Stroke]):
@@ -19,7 +14,7 @@ def get_outline_phonemes(outline: Iterable[Stroke]):
     current_group_consonants: list[Sound] = []
     
     for stroke in outline:
-        left_bank_consonants, vowels, right_bank_consonants, asterisk = split_stroke_parts(stroke)
+        left_bank_consonants, vowels, right_bank_consonants, asterisk = amphitheory.split_stroke_parts(stroke)
         if len(asterisk) > 0:
             return None
 
@@ -27,10 +22,10 @@ def get_outline_phonemes(outline: Iterable[Stroke]):
 
         if len(vowels) > 0:
             is_diphthong_transition = len(consonant_vowel_groups) > 0 and len(current_group_consonants) == 0
-            if is_diphthong_transition and (prev_vowel := consonant_vowel_groups[-1].vowel).phoneme in DIPHTHONG_TRANSITIONS_BY_FIRST_VOWEL:
-                current_group_consonants.append(Sound(DIPHTHONG_TRANSITIONS_BY_FIRST_VOWEL[prev_vowel.phoneme], None))
+            if is_diphthong_transition and (prev_vowel := consonant_vowel_groups[-1].vowel).phoneme in amphitheory.spec.DIPHTHONG_TRANSITIONS_BY_FIRST_VOWEL:
+                current_group_consonants.append(Sound(amphitheory.spec.DIPHTHONG_TRANSITIONS_BY_FIRST_VOWEL[prev_vowel.phoneme], None))
 
-            consonant_vowel_groups.append(ConsonantVowelGroup(tuple(current_group_consonants), Sound(CHORDS_TO_PHONEMES_VOWELS[vowels], None)))
+            consonant_vowel_groups.append(ConsonantVowelGroup(tuple(current_group_consonants), Sound(amphitheory.chords_to_phonemes_vowels[vowels], None)))
 
             current_group_consonants = []
 
@@ -49,8 +44,8 @@ def get_sopheme_phonemes(sophemes: Iterable[Sopheme]):
 
         elif sopheme.phoneme in vowel_phonemes:
             is_diphthong_transition = len(consonant_vowel_groups) > 0 and len(current_group_consonants) == 0
-            if is_diphthong_transition and (prev_vowel := consonant_vowel_groups[-1].vowel).phoneme in DIPHTHONG_TRANSITIONS_BY_FIRST_VOWEL:
-                current_group_consonants.append(Sound(DIPHTHONG_TRANSITIONS_BY_FIRST_VOWEL[prev_vowel.phoneme], None))
+            if is_diphthong_transition and (prev_vowel := consonant_vowel_groups[-1].vowel).phoneme in amphitheory.spec.DIPHTHONG_TRANSITIONS_BY_FIRST_VOWEL:
+                current_group_consonants.append(Sound(amphitheory.spec.DIPHTHONG_TRANSITIONS_BY_FIRST_VOWEL[prev_vowel.phoneme], None))
 
             consonant_vowel_groups.append(ConsonantVowelGroup(tuple(current_group_consonants), Sound.from_sopheme(sopheme)))
             
@@ -58,15 +53,15 @@ def get_sopheme_phonemes(sophemes: Iterable[Sopheme]):
             
         elif any(any(key in stroke.rtfcre for key in "AOEU") for stroke in sopheme.steno):
             is_diphthong_transition = len(consonant_vowel_groups) > 0 and len(current_group_consonants) == 0
-            if is_diphthong_transition and (prev_vowel := consonant_vowel_groups[-1].vowel).phoneme in DIPHTHONG_TRANSITIONS_BY_FIRST_VOWEL:
-                current_group_consonants.append(Sound(DIPHTHONG_TRANSITIONS_BY_FIRST_VOWEL[prev_vowel.phoneme], None))
+            if is_diphthong_transition and (prev_vowel := consonant_vowel_groups[-1].vowel).phoneme in amphitheory.spec.DIPHTHONG_TRANSITIONS_BY_FIRST_VOWEL:
+                current_group_consonants.append(Sound(amphitheory.spec.DIPHTHONG_TRANSITIONS_BY_FIRST_VOWEL[prev_vowel.phoneme], None))
 
             for stroke in sopheme.steno:
                 vowel_substroke = stroke & Stroke.from_steno("AOEU")
                 if len(vowel_substroke) > 0:
                     break
                 
-            vowel_phoneme = CHORDS_TO_PHONEMES_VOWELS[vowel_substroke]
+            vowel_phoneme = amphitheory.chords_to_phonemes_vowels[vowel_substroke]
 
             consonant_vowel_groups.append(ConsonantVowelGroup(tuple(current_group_consonants), Sound(vowel_phoneme, sopheme)))
 

@@ -3,12 +3,8 @@ from typing import Optional
 import plover.log
 
 from ...util.Trie import TransitionCostInfo, NondeterministicTrie
-from ...theory.theory import (
-    TRIE_STROKE_BOUNDARY_KEY,
-    TRIE_LINKER_KEY,
-    INITIAL_VOWEL_CHORD,
-    PHONEMES_TO_CHORDS_VOWELS,
-)
+from ...util.config import TRIE_STROKE_BOUNDARY_KEY, TRIE_LINKER_KEY
+from ...theory.theory import amphitheory
 
 from .state import EntryBuilderState, OutlineSounds
 from .find_clusters import Cluster, handle_clusters
@@ -57,7 +53,7 @@ def add_entry(trie: NondeterministicTrie[str, str], phonemes: OutlineSounds, tra
         # if it matches verbatim
         if vowels_src_node is None:
             vowels_src_node = state.left_consonant_src_node
-        postvowels_node = trie.get_first_dst_node_else_create(vowels_src_node, PHONEMES_TO_CHORDS_VOWELS[vowel.phoneme].rtfcre, TransitionCostInfo(0, translation))
+        postvowels_node = trie.get_first_dst_node_else_create(vowels_src_node, amphitheory.spec.PHONEMES_TO_CHORDS_VOWELS[vowel.phoneme].rtfcre, TransitionCostInfo(0, translation))
 
         handle_clusters(upcoming_clusters, state.left_consonant_src_node, state.right_consonant_src_node, state, True)
 
@@ -65,8 +61,8 @@ def add_entry(trie: NondeterministicTrie[str, str], phonemes: OutlineSounds, tra
         state.right_consonant_src_node = postvowels_node
         state.left_consonant_src_node = trie.get_first_dst_node_else_create(postvowels_node, TRIE_STROKE_BOUNDARY_KEY, TransitionCostInfo(0, translation))
 
-        if INITIAL_VOWEL_CHORD is not None and state.is_first_consonant_set and len(consonants) == 0:
-            trie.link_chain(trie.ROOT, state.left_consonant_src_node, INITIAL_VOWEL_CHORD.keys(), TransitionCostInfo(0, translation))
+        if amphitheory.spec.INITIAL_VOWEL_CHORD is not None and state.is_first_consonant_set and len(consonants) == 0:
+            trie.link_chain(trie.ROOT, state.left_consonant_src_node, amphitheory.spec.INITIAL_VOWEL_CHORD.keys(), TransitionCostInfo(0, translation))
 
         state.prev_left_consonant_node = None
 
@@ -89,6 +85,3 @@ def add_entry(trie: NondeterministicTrie[str, str], phonemes: OutlineSounds, tra
         return
 
     trie.set_translation(state.right_consonant_src_node, translation)
-
-
-

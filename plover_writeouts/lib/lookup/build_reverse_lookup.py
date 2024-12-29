@@ -1,9 +1,9 @@
 from plover.steno import Stroke
 import plover.log
 
-from ..theory.theory import TRIE_STROKE_BOUNDARY_KEY, TRIE_LINKER_KEY, LINKER_CHORD
-from ..util.util import can_add_stroke_on
+from ..theory.theory import amphitheory
 from ..util.Trie import NondeterministicTrie
+from ..util.config import TRIE_STROKE_BOUNDARY_KEY, TRIE_LINKER_KEY
 
 
 def create_reverse_lookup_for(trie: NondeterministicTrie[str, str]):
@@ -23,11 +23,11 @@ def create_reverse_lookup_for(trie: NondeterministicTrie[str, str]):
                     continue
 
                 if key == TRIE_LINKER_KEY:
-                    key_stroke = LINKER_CHORD
+                    key_stroke = amphitheory.spec.LINKER_CHORD
                 else: 
                     key_stroke = Stroke.from_steno(key)
 
-                if can_add_stroke_on(latest_stroke, key_stroke):
+                if amphitheory.can_add_stroke_on(latest_stroke, key_stroke):
                     latest_stroke += key_stroke
                 else:
                     invalid = True

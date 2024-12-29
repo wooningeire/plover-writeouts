@@ -13,6 +13,7 @@ class TheoryService:
         self.clusters_trie = self.__build_clusters_trie()
         self.vowel_clusters_trie = self.__build_vowel_clusters_trie()
         self.__split_consonant_phonemes = self.__build_consonants_splitter()
+        self.chords_to_phonemes_vowels = self.__build_chords_to_phonemes_vowels()
 
     @staticmethod
     def theory(spec: type[TheorySpec]) -> "TheoryService":
@@ -99,7 +100,12 @@ class TheoryService:
                 chord_start_index = longest_chord_end_index + 1
         
         return split_consonant_phonemes
-
+    
+    def __build_chords_to_phonemes_vowels(self):
+        return {
+            stroke: phoneme
+            for phoneme, stroke in self.spec.PHONEMES_TO_CHORDS_VOWELS.items()
+        }
     
     def left_consonant_chord(self, sound: Sound) -> Stroke:
         return self.spec.PHONEMES_TO_CHORDS_LEFT[sound.phoneme]
@@ -109,3 +115,18 @@ class TheoryService:
     
     def split_consonant_phonemes(self, stroke: Stroke):
         return self.__split_consonant_phonemes(stroke)
+    
+    def can_add_stroke_on(self, src_stroke: Stroke, addon_stroke: Stroke):
+        return (
+            len(src_stroke - self.spec.ASTERISK_SUBSTROKE) == 0
+            or len(addon_stroke - self.spec.ASTERISK_SUBSTROKE) == 0
+            or Stroke.from_keys(((src_stroke - self.spec.ASTERISK_SUBSTROKE).keys()[-1],)) < Stroke.from_keys(((addon_stroke - self.spec.ASTERISK_SUBSTROKE).keys()[0],))
+        )
+
+    def split_stroke_parts(self, stroke: Stroke):
+        left_bank_consonants = stroke & self.spec.LEFT_BANK_CONSONANTS_SUBSTROKE
+        vowels = stroke & self.spec.VOWELS_SUBSTROKE
+        right_bank_consonants = stroke & self.spec.RIGHT_BANK_CONSONANTS_SUBSTROKE
+        asterisk = stroke & self.spec.ASTERISK_SUBSTROKE
+
+        return left_bank_consonants, vowels, right_bank_consonants, asterisk

@@ -8,7 +8,7 @@ from plover.steno import Stroke
 from .state import EntryBuilderState, OutlineSounds
 from .rules.elision import allow_elide_previous_vowel_using_first_left_consonant, allow_elide_previous_vowel_using_first_right_consonant
 from ...util.Trie import NondeterministicTrie, TransitionCostInfo, ReadonlyTrie
-from ...theory.theory import TransitionCosts, amphitheory, LEFT_BANK_CONSONANTS_SUBSTROKE
+from ...theory.theory import amphitheory
 from ...stenophoneme.Stenophoneme import Stenophoneme, vowel_phonemes
 
 @dataclass(frozen=True)
@@ -26,10 +26,10 @@ class _ClusterLeft(Cluster):
         if current_left is None: return
 
         if self.initial_state.left_consonant_src_node is not None:
-            trie.link_chain(self.initial_state.left_consonant_src_node, current_left, self.stroke.keys(), TransitionCostInfo(TransitionCosts.CLUSTER, translation))
+            trie.link_chain(self.initial_state.left_consonant_src_node, current_left, self.stroke.keys(), TransitionCostInfo(amphitheory.spec.TransitionCosts.CLUSTER, translation))
 
         if self.initial_state.can_elide_prev_vowel_left:
-            allow_elide_previous_vowel_using_first_left_consonant(self.initial_state, self.stroke, current_left, TransitionCosts.CLUSTER)
+            allow_elide_previous_vowel_using_first_left_consonant(self.initial_state, self.stroke, current_left, amphitheory.spec.TransitionCosts.CLUSTER)
 
 @dataclass(frozen=True)
 class _ClusterRight(Cluster):
@@ -37,10 +37,10 @@ class _ClusterRight(Cluster):
         if current_right is None: return
 
         if self.initial_state.right_consonant_src_node is not None:
-            trie.link_chain(self.initial_state.right_consonant_src_node, current_right, self.stroke.keys(), TransitionCostInfo(TransitionCosts.CLUSTER, translation))
+            trie.link_chain(self.initial_state.right_consonant_src_node, current_right, self.stroke.keys(), TransitionCostInfo(amphitheory.spec.TransitionCosts.CLUSTER, translation))
 
         if self.initial_state.is_first_consonant:
-            allow_elide_previous_vowel_using_first_right_consonant(self.initial_state, self.stroke, current_right, TransitionCosts.CLUSTER)
+            allow_elide_previous_vowel_using_first_right_consonant(self.initial_state, self.stroke, current_right, amphitheory.spec.TransitionCosts.CLUSTER)
 
         # if origin.right_f is not None and right_consonant_f_node is not None:
         #     trie.link_chain(origin.right_f, right_consonant_f_node, cluster_stroke.keys(), TransitionCosts.CLUSTER, translation)
@@ -108,7 +108,7 @@ def _get_clusters_from_node(
     stroke = clusters_trie.get_translation(node)
     if stroke is None: return None
 
-    if len(stroke & LEFT_BANK_CONSONANTS_SUBSTROKE) > 0:
+    if len(stroke & amphitheory.spec.LEFT_BANK_CONSONANTS_SUBSTROKE) > 0:
         return current_index, _ClusterLeft(stroke, dataclasses.replace(state))
     else:
         return current_index, _ClusterRight(stroke, dataclasses.replace(state))

@@ -4,8 +4,7 @@ from typing import Generic, TypeVar, Iterable
 from plover.steno import Stroke
 
 from ..stenophoneme.Stenophoneme import Stenophoneme
-from ..util.util import can_add_stroke_on
-from ..theory.theory import ASTERISK_SUBSTROKE
+from ..theory.default import lapwing
 
 @dataclass(frozen=True)
 class AsteriskableKey:
@@ -23,7 +22,7 @@ class AsteriskableKey:
         return tuple(
             AsteriskableKey(key, has_asterisk)
             for stroke, has_asterisk in (
-                (stroke - ASTERISK_SUBSTROKE, ASTERISK_SUBSTROKE in stroke)
+                (stroke - lapwing.spec.ASTERISK_SUBSTROKE, lapwing.spec.ASTERISK_SUBSTROKE in stroke)
                 for stroke in strokes
             )
             for key in stroke.keys() 
@@ -49,9 +48,9 @@ class AnnotatedChord(Generic[T]):
         for key, asterisk_match in zip(keys, asterisk_matches):
             key_stroke = Stroke.from_keys((key,))
             if asterisk_match:
-                key_stroke += ASTERISK_SUBSTROKE
+                key_stroke += lapwing.spec.ASTERISK_SUBSTROKE
 
-            if can_add_stroke_on(current_stroke, key_stroke):
+            if lapwing.can_add_stroke_on(current_stroke, key_stroke):
                 current_stroke += key_stroke
             else:
                 strokes.append(current_stroke)
